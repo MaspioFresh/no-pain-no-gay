@@ -69,18 +69,25 @@ export function HistoryView({ sessions, plans, onBack, onDeleteSession }: Histor
                 {(session.exercises || []).map((ex, i) => {
                   const planEx = plans.find(p => p.id === session.planId)?.exercises.find(e => e.id === ex.exerciseId);
                   return (
-                    <div key={i} className="flex justify-between items-center text-sm border-b border-white/5 pb-2 last:border-0 last:pb-0">
-                      <div className="flex items-center space-x-2">
-                        <Dumbbell size={12} className="text-white/40" />
-                        <span className="text-white/80">{planEx?.name || 'Esercizio'}</span>
+                    <div key={i} className="flex flex-col border-b border-white/5 pb-3 pt-1 last:border-0 last:pb-0">
+                      <div className="flex justify-between items-center text-sm">
+                        <div className="flex items-center space-x-2">
+                          <Dumbbell size={12} className="text-white/40" />
+                          <span className="text-white/80">{planEx?.name || 'Esercizio'}</span>
+                        </div>
+                        <div className="flex space-x-2 font-mono text-[10px] flex-wrap justify-end gap-y-1">
+                          {(ex.sets || []).map((s, si) => (
+                            <span key={si} className="bg-white/5 px-1 rounded">
+                              {s.weight}{s.unit || session.unitAtTime || 'kg'}×{s.reps}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex space-x-2 font-mono text-[10px]">
-                        {(ex.sets || []).map((s, si) => (
-                          <span key={si} className="bg-white/5 px-1 rounded">
-                            {s.weight}{s.unit || session.unitAtTime || 'kg'}×{s.reps}
-                          </span>
-                        ))}
-                      </div>
+                      {ex.notes && (
+                        <div className="text-[10px] text-accent/80 italic mt-2 bg-accent/5 p-2 rounded border border-accent/20">
+                          "{ex.notes}"
+                        </div>
+                      )}
                     </div>
                   );
                 })}

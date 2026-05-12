@@ -32,6 +32,7 @@ export interface ExerciseSession {
   exerciseId: string;
   sets: SetEntry[];
   barbellWeightUsed?: number; // The weight of the barbell used in this session
+  notes?: string; // Personal notes for this session
 }
 
 export interface AppSettings {

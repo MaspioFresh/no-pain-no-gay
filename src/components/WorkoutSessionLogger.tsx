@@ -142,6 +142,12 @@ export function WorkoutSessionLogger({
     setExerciseSessions(newSessions);
   };
 
+  const updateExerciseNotes = (exerciseIndex: number, notes: string) => {
+    const newSessions = [...exerciseSessions];
+    newSessions[exerciseIndex].notes = notes;
+    setExerciseSessions(newSessions);
+  };
+
   const addSet = (exerciseIndex: number) => {
     const newSessions = [...exerciseSessions];
     const lastSet = newSessions[exerciseIndex].sets[newSessions[exerciseIndex].sets.length - 1];
@@ -220,6 +226,13 @@ export function WorkoutSessionLogger({
           </div>
         </div>
         <div className="flex space-x-2">
+          <button 
+            onClick={onFinish}
+            className="p-2 rounded-full bg-transparent border border-red-500 text-red-500 hover:bg-red-500/10 active:scale-95 transition-all flex items-center justify-center"
+            title="Annulla Allenamento"
+          >
+            <X size={20} className="stroke-[3]" />
+          </button>
           <button 
             onClick={handleSave} 
             className="rounded-full bg-transparent text-accent font-extrabold flex items-center space-x-2 px-6 py-2 shadow-[0_0_20px_rgba(220,252,4,0.15)] hover:bg-accent/10 active:scale-95 transition-all text-sm border border-accent"
@@ -379,6 +392,15 @@ export function WorkoutSessionLogger({
                 >
                   <Minus size={14} />
                 </button>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-white/5">
+                <textarea
+                  value={exerciseSessions[exIdx].notes || ''}
+                  onChange={(e) => updateExerciseNotes(exIdx, e.target.value)}
+                  placeholder="Aggiungi una nota personale per questo allenamento..."
+                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white/80 placeholder:text-white/30 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all resize-none h-20"
+                />
               </div>
             </div>
           </motion.div>
