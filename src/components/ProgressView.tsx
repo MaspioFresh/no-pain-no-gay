@@ -36,28 +36,42 @@ export function ProgressView({ sessions, plans, onBack }: ProgressViewProps) {
 
     const data: any[] = [];
 
+    const exerciseType = selectedPlan?.exercises.find(e => e.id === selectedExerciseId)?.type;
+
     relevantSessions.forEach(session => {
       const exerciseLog = session.exercises.find(e => e.exerciseId === selectedExerciseId);
       if (exerciseLog) {
-        let maxWeight = 0;
-        let totalVolume = 0;
+        let metric1 = 0;
+        let metric2 = 0;
         let validSets = 0;
 
         exerciseLog.sets.forEach(set => {
-          // Consider a set valid if it's explicitly completed OR if it has both weight and reps logged
-          const isSetValid = set.completed || (set.weight > 0 && set.reps > 0);
-          if (isSetValid && set.weight > 0) {
-            maxWeight = Math.max(maxWeight, set.weight);
-            totalVolume += set.weight * set.reps;
-            validSets++;
+          if (exerciseType === 'cardio') {
+            if (set.completed || (set.distance || 0) > 0 || (set.timeSeconds || 0) > 0) {
+               metric1 += set.distance || 0; // Total Distance
+               metric2 += set.timeSeconds || 0; // Total Time
+               validSets++;
+            }
+          } else if (exerciseType === 'time') {
+            if (set.completed || (set.timeSeconds || 0) > 0) {
+               metric1 = Math.max(metric1, set.weight || 0); // Max Added Weight
+               metric2 += set.timeSeconds || 0; // Total Time
+               validSets++;
+            }
+          } else {
+            if (set.completed || ((set.weight || 0) > 0 && (set.reps || 0) > 0)) {
+               metric1 = Math.max(metric1, set.weight || 0); // Max Weight
+               metric2 += (set.weight || 0) * (set.reps || 0); // Total Volume
+               validSets++;
+            }
           }
         });
 
         if (validSets > 0) {
           data.push({
             date: new Date(session.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-            maxWeight,
-            totalVolume
+            metric1,
+            metric2
           });
         }
       }
@@ -65,6 +79,16 @@ export function ProgressView({ sessions, plans, onBack }: ProgressViewProps) {
 
     return data;
   }, [sessions, selectedPlanId, selectedExerciseId]);
+
+  const exerciseType = selectedPlan?.exercises.find(e => e.id === selectedExerciseId)?.type;
+  const isCardio = exerciseType === 'cardio';
+  const isTime = exerciseType === 'time';
+  
+  const metric1Title = isCardio ? 'Distanza Totale' : 'Peso Massimo';
+  const metric1Desc = isCardio ? 'Distanza percorsa cumulativa' : 'Miglioramento del carico massimo sollevato/usato';
+  
+  const metric2Title = (isCardio || isTime) ? 'Tempo Totale' : 'Volume Totale';
+  const metric2Desc = (isCardio || isTime) ? 'Minuti/Secondi cumulativi' : 'Carico totale (Serie × Ripetizioni × Peso)';
 
   return (
     <div className="flex flex-col space-y-6 pb-24 animate-in fade-in duration-300">
@@ -117,8 +141,8 @@ export function ProgressView({ sessions, plans, onBack }: ProgressViewProps) {
           <div className="space-y-8">
             <div className="hardware-card p-4 space-y-4 bg-white/[0.02]">
               <div>
-                <h3 className="font-bold text-accent">Peso Massimo</h3>
-                <p className="text-[10px] text-white/40 uppercase tracking-tighter">Miglioramento del carico massimo sollevato</p>
+                <h3 className="font-bold text-accent">{metric1Title}</h3>
+                <p className="text-[10px] text-white/40 uppercase tracking-tighter">{metric1Desc}</p>
               </div>
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -130,7 +154,7 @@ export function ProgressView({ sessions, plans, onBack }: ProgressViewProps) {
                       contentStyle={{ backgroundColor: '#151619', border: '1px solid rgba(220,252,4,0.2)', borderRadius: '8px' }}
                       itemStyle={{ color: '#dcfc04' }}
                     />
-                    <Line type="monotone" dataKey="maxWeight" name="Peso Max" stroke="#dcfc04" strokeWidth={3} dot={{ fill: '#0c0d0e', stroke: '#dcfc04', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="metric1" name={metric1Title} stroke="#dcfc04" strokeWidth={3} dot={{ fill: '#0c0d0e', stroke: '#dcfc04', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -138,8 +162,8 @@ export function ProgressView({ sessions, plans, onBack }: ProgressViewProps) {
 
             <div className="hardware-card p-4 space-y-4 bg-white/[0.02]">
               <div>
-                <h3 className="font-bold text-accent">Volume Totale</h3>
-                <p className="text-[10px] text-white/40 uppercase tracking-tighter">Carico totale (Serie × Ripetizioni × Peso)</p>
+                <h3 className="font-bold text-accent">{metric2Title}</h3>
+                <p className="text-[10px] text-white/40 uppercase tracking-tighter">{metric2Desc}</p>
               </div>
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -152,7 +176,7 @@ export function ProgressView({ sessions, plans, onBack }: ProgressViewProps) {
                       itemStyle={{ color: '#dcfc04' }}
                       cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                     />
-                    <Bar dataKey="totalVolume" name="Volume" fill="#dcfc04" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="metric2" name={metric2Title} fill="#dcfc04" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

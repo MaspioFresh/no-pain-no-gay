@@ -1,6 +1,6 @@
 import React from 'react';
 import { WorkoutSession, WorkoutPlan } from '../types';
-import { ArrowLeft, Calendar, Dumbbell, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Dumbbell, Trash2, Edit2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface HistoryViewProps {
@@ -8,9 +8,25 @@ interface HistoryViewProps {
   plans: WorkoutPlan[];
   onBack: () => void;
   onDeleteSession: (id: string) => void;
+  onEditSession: (session: WorkoutSession) => void;
 }
 
-export function HistoryView({ sessions, plans, onBack, onDeleteSession }: HistoryViewProps) {
+const formatTimeSeconds = (totalSeconds: number, isCardio: boolean) => {
+  if (isCardio) {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    return `${m}m ${s}s`;
+  } else {
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  }
+};
+
+export function HistoryView({ sessions, plans, onBack, onDeleteSession, onEditSession }: HistoryViewProps) {
   const getPlanName = (planId: string) => plans.find(p => p.id === planId)?.name || 'Scheda Eliminata';
 
   const formatDate = (isoString: string) => {
@@ -51,8 +67,18 @@ export function HistoryView({ sessions, plans, onBack, onDeleteSession }: Histor
                   </div>
                   <span className="font-bold">{formatDate(session.date)}</span>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <span className="mono-label text-[10px]">{getPlanName(session.planId)}</span>
+                <div className="flex items-center space-x-1">
+                  <span className="mono-label text-[10px] mr-2">{getPlanName(session.planId)}</span>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditSession(session);
+                    }}
+                    className="p-2 text-white/20 hover:text-accent hover:bg-accent/10 rounded-full transition-all active:scale-90"
+                    title="Modifica"
+                  >
+                    <Edit2 size={16} />
+                  </button>
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -68,17 +94,27 @@ export function HistoryView({ sessions, plans, onBack, onDeleteSession }: Histor
               <div className="p-4 space-y-2">
                 {(session.exercises || []).map((ex, i) => {
                   const planEx = plans.find(p => p.id === session.planId)?.exercises.find(e => e.id === ex.exerciseId);
+                  const isSupersetWithPrev = i > 0 && ex.supersetId && ex.supersetId === session.exercises[i - 1].supersetId;
+                  const isSupersetWithNext = i < session.exercises.length - 1 && ex.supersetId && ex.supersetId === session.exercises[i + 1].supersetId;
+
                   return (
-                    <div key={i} className="flex flex-col border-b border-white/5 pb-3 pt-1 last:border-0 last:pb-0">
+                    <div key={i} className={`flex flex-col pb-3 pt-2 ${isSupersetWithNext ? '' : 'border-b border-white/5 last:border-0 last:pb-0'} ${(isSupersetWithPrev || isSupersetWithNext) ? 'border-l-2 border-accent/30 pl-3 ml-1' : ''} ${isSupersetWithPrev ? 'pt-0' : ''}`}>
                       <div className="flex justify-between items-center text-sm">
                         <div className="flex items-center space-x-2">
                           <Dumbbell size={12} className="text-white/40" />
-                          <span className="text-white/80">{planEx?.name || 'Esercizio'}</span>
+                          <span className="text-white/80 font-bold">{planEx?.name || 'Esercizio'}</span>
+                          {isSupersetWithNext && !isSupersetWithPrev && (
+                            <span className="text-[8px] bg-accent/10 text-accent px-1 rounded uppercase font-black">Superserie</span>
+                          )}
                         </div>
                         <div className="flex space-x-2 font-mono text-[10px] flex-wrap justify-end gap-y-1">
                           {(ex.sets || []).map((s, si) => (
                             <span key={si} className="bg-white/5 px-1 rounded">
-                              {s.weight}{s.unit || session.unitAtTime || 'kg'}×{s.reps}
+                              {planEx?.type === 'cardio'
+                                ? `${formatTimeSeconds(s.timeSeconds || 0, true)} - ${s.distance || 0}${s.unit}`
+                                : planEx?.type === 'time'
+                                ? `${formatTimeSeconds(s.timeSeconds || 0, false)} + ${s.weight || 0}${s.unit}`
+                                : `${s.weight}${s.unit || session.unitAtTime || 'kg'}×${s.reps}`}
                             </span>
                           ))}
                         </div>

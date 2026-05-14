@@ -28,7 +28,11 @@ const DEFAULT_DATA: AppData = {
   ],
   sessions: [],
   settings: {
-    unit: 'kg'
+    unit: 'kg',
+    themeColor: '#dcfc04',
+    weightEntryMode: 'total',
+    barbellMode: 'total',
+    dumbbellMode: 'total'
   }
 };
 
@@ -38,7 +42,11 @@ export function useWorkoutData() {
     const initial = stored ? JSON.parse(stored) : DEFAULT_DATA;
     
     // Ensure settings exist for legacy data
-    if (!initial.settings) initial.settings = { unit: 'kg' };
+    if (!initial.settings) initial.settings = { unit: 'kg', themeColor: '#dcfc04', weightEntryMode: 'total', barbellMode: 'total', dumbbellMode: 'total' };
+    if (!initial.settings.themeColor) initial.settings.themeColor = '#dcfc04';
+    if (!initial.settings.weightEntryMode) initial.settings.weightEntryMode = 'total';
+    if (!initial.settings.barbellMode) initial.settings.barbellMode = initial.settings.weightEntryMode || 'total';
+    if (!initial.settings.dumbbellMode) initial.settings.dumbbellMode = 'total';
     
     // Migrate and deduplicate plans
     if (initial.plans) {
@@ -60,7 +68,8 @@ export function useWorkoutData() {
           if (!Array.isArray(targetSets)) {
             targetSets = [{ reps: 0 }];
           }
-          return { ...ex, targetSets };
+          const type = ex.type || (ex.barbellWeight ? 'barbell' : 'machine');
+          return { ...ex, targetSets, type };
         })
       }));
     }
@@ -72,12 +81,12 @@ export function useWorkoutData() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [data]);
 
-  const toggleUnit = () => {
+  const updateSettings = (newSettings: Partial<AppData['settings']>) => {
     setData(prev => ({
       ...prev,
       settings: {
         ...prev.settings,
-        unit: prev.settings.unit === 'kg' ? 'lb' : 'kg'
+        ...newSettings
       }
     }));
   };
@@ -87,6 +96,18 @@ export function useWorkoutData() {
       ...prev,
       sessions: [session, ...prev.sessions]
     }));
+  };
+
+  const updateSession = (session: WorkoutSession) => {
+    setData(prev => {
+      const exists = prev.sessions.findIndex(s => s.id === session.id);
+      if (exists >= 0) {
+        const newSessions = [...prev.sessions];
+        newSessions[exists] = session;
+        return { ...prev, sessions: newSessions };
+      }
+      return prev;
+    });
   };
 
   const addPlan = (plan: WorkoutPlan) => {
@@ -129,11 +150,12 @@ export function useWorkoutData() {
   return {
     data,
     addSession,
+    updateSession,
     addPlan,
     deletePlan,
     importData,
     findPreviousSession,
-    toggleUnit,
+    updateSettings,
     deleteSession,
   };
 }

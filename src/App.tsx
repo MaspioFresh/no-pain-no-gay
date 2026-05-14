@@ -8,33 +8,37 @@ import { useWorkoutData } from './hooks/useWorkoutData';
 import { Dashboard } from './components/Dashboard';
 import { WorkoutSessionLogger } from './components/WorkoutSessionLogger';
 import { HistoryView } from './components/HistoryView';
-import { DataManagement } from './components/DataManagement';
+import { SettingsView } from './components/SettingsView';
 import { PlanEditor } from './components/PlanEditor';
 import { ProgressView } from './components/ProgressView';
 import { WorkoutPlan, WorkoutSession, ExerciseSession } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { Play, Timer, ArrowLeft } from 'lucide-react';
+import { Modal, useModal } from './components/Modal';
 
 type View = 'dashboard' | 'active-session' | 'history' | 'data' | 'create-plan' | 'view-plan' | 'modify-plan' | 'progress';
 
 export default function App() {
-  const { 
-    data, 
-    addSession, 
-    addPlan, 
-    importData, 
+  const {
+    data,
+    addSession,
+    updateSession,
+    addPlan,
+    importData,
     findPreviousSession,
-    toggleUnit,
+    updateSettings,
     deletePlan,
     deleteSession
   } = useWorkoutData();
-  
+
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [activePlan, setActivePlan] = useState<WorkoutPlan | null>(null);
   const [activeSessionLogs, setActiveSessionLogs] = useState<ExerciseSession[]>([]);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [viewingPlan, setViewingPlan] = useState<WorkoutPlan | null>(null);
   const [modifyingPlan, setModifyingPlan] = useState<WorkoutPlan | null>(null);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const { modalState, closeModal, showAlert, showConfirm } = useModal();
 
   const ACTIVE_SESSION_STORAGE_KEY = 'workout_active_session';
 
@@ -56,6 +60,13 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // Apply theme color
+    if (data.settings?.themeColor) {
+      document.documentElement.style.setProperty('--accent', data.settings.themeColor);
+    }
+  }, [data.settings?.themeColor]);
+
+  useEffect(() => {
     if (activePlan) {
       localStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, JSON.stringify({
         activePlan,
@@ -69,21 +80,48 @@ export default function App() {
     setActivePlan(plan);
     setActiveSessionLogs((plan.exercises || []).map(ex => ({
       exerciseId: ex.id,
+      supersetId: ex.supersetId,
       sets: (ex.targetSets || []).map(t => ({
         reps: t.reps || 0,
         weight: t.weight || 0,
+        timeSeconds: t.timeSeconds || 0,
+        distance: t.distance || 0,
         unit: data.settings.unit,
         completed: false
       })),
       barbellWeightUsed: ex.barbellWeight || 0
     })));
     setStartTime(Date.now());
+    setEditingSessionId(null);
+    setCurrentView('active-session');
+  };
+
+  const handleEditSession = (session: WorkoutSession) => {
+    const plan = data.plans.find(p => p.id === session.planId);
+    if (!plan) {
+      showAlert('Scheda non trovata', 'Impossibile modificare questa sessione perché la scheda originale è stata eliminata.', 'warning');
+      return;
+    }
+    setActivePlan(plan);
+    setActiveSessionLogs(session.exercises);
+    setEditingSessionId(session.id);
+    setStartTime(null); // Stopwatch non necessario quando si modifica una sessione passata
     setCurrentView('active-session');
   };
 
   const handleSaveSession = (session: WorkoutSession) => {
-    addSession(session);
-    localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+    if (editingSessionId) {
+      const originalSession = data.sessions.find(s => s.id === editingSessionId);
+      updateSession({
+        ...session,
+        id: editingSessionId,
+        date: originalSession?.date || session.date
+      });
+      setEditingSessionId(null);
+    } else {
+      addSession(session);
+      localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+    }
     setActivePlan(null);
     setActiveSessionLogs([]);
     setStartTime(null);
@@ -99,10 +137,10 @@ export default function App() {
     switch (currentView) {
       case 'dashboard':
         return (
-          <Dashboard 
+          <Dashboard
             plans={data.plans}
             unit={data.settings.unit}
-            onToggleUnit={toggleUnit}
+            onToggleUnit={() => updateSettings({ unit: data.settings.unit === 'kg' ? 'lb' : 'kg' })}
             onStartPlan={handleStartPlan}
             onViewPlan={(plan) => {
               setViewingPlan(plan);
@@ -140,7 +178,7 @@ export default function App() {
                   <div className="flex flex-wrap gap-2">
                     {(ex.targetSets || []).map((s, i) => (
                       <span key={i} className="px-2 py-1 bg-white/5 rounded text-[10px] mono-label">
-                        SET {i+1}: {s.reps} RIP {s.weight ? `${s.weight}kg` : ''}
+                        SET {i + 1}: {s.reps} RIP {s.weight ? `${s.weight}kg` : ''}
                       </span>
                     ))}
                   </div>
@@ -148,7 +186,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <button 
+            <button
               onClick={() => handleStartPlan(viewingPlan)}
               className="w-full py-4 bg-transparent text-accent font-black rounded-xl shadow-[0_0_20px_rgba(220,252,4,0.1)] border border-accent hover:bg-accent/5 active:scale-95 transition-all tracking-widest"
             >
@@ -159,7 +197,7 @@ export default function App() {
       case 'active-session':
         if (!activePlan) return null;
         return (
-          <WorkoutSessionLogger 
+          <WorkoutSessionLogger
             plan={activePlan}
             unit={data.settings.unit}
             exerciseSessions={activeSessionLogs}
@@ -171,46 +209,46 @@ export default function App() {
               setCurrentView('dashboard');
             }}
             onFinish={() => {
-               // Use a standard prompt first, if it fails then just reset
-               try {
-                 if (window.confirm('Annullare l\'allenamento corrente? I progressi non salvati andranno persi.')) {
-                    localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
-                    setActivePlan(null);
-                    setActiveSessionLogs([]);
-                    setStartTime(null);
-                    setCurrentView('dashboard');
-                 }
-               } catch (e) {
-                 // Fallback if confirm is blocked
-                 localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
-                 setActivePlan(null);
-                 setActiveSessionLogs([]);
-                 setStartTime(null);
-                 setCurrentView('dashboard');
-               }
+              showConfirm(
+                'Annulla allenamento',
+                'Sei sicuro? I progressi non salvati andranno persi.',
+                () => {
+                  localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+                  setActivePlan(null);
+                  setActiveSessionLogs([]);
+                  setStartTime(null);
+                  setCurrentView('dashboard');
+                },
+                'Abbandona',
+                true
+              );
             }}
+            barbellMode={data.settings.barbellMode}
+            dumbbellMode={data.settings.dumbbellMode}
           />
         );
       case 'history':
         return (
-          <HistoryView 
+          <HistoryView
             sessions={data.sessions}
             plans={data.plans}
             onBack={() => setCurrentView('dashboard')}
             onDeleteSession={deleteSession}
+            onEditSession={handleEditSession}
           />
         );
       case 'data':
         return (
-          <DataManagement 
+          <SettingsView
             data={data}
             onImport={importData}
+            onUpdateSettings={updateSettings}
             onBack={() => setCurrentView('dashboard')}
           />
         );
       case 'progress':
         return (
-          <ProgressView 
+          <ProgressView
             sessions={data.sessions}
             plans={data.plans}
             onBack={() => setCurrentView('dashboard')}
@@ -218,14 +256,14 @@ export default function App() {
         );
       case 'create-plan':
         return (
-          <PlanEditor 
+          <PlanEditor
             onSave={handleSavePlan}
             onCancel={() => setCurrentView('dashboard')}
           />
         );
       case 'modify-plan':
         return (
-          <PlanEditor 
+          <PlanEditor
             existingPlan={modifyingPlan || undefined}
             onSave={handleSavePlan}
             onCancel={() => setCurrentView('dashboard')}
@@ -237,7 +275,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0c0d0e] text-white p-4 max-w-lg mx-auto overflow-x-hidden pb-24">
+    <div className="min-h-screen bg-[#0c0d0e] text-white p-4 max-w-lg mx-auto pb-24">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentView}
@@ -251,13 +289,13 @@ export default function App() {
       </AnimatePresence>
 
       {activePlan && currentView !== 'active-session' && (
-        <motion.div 
+        <motion.div
           initial={{ y: 100 }}
           animate={{ y: 0 }}
           className="fixed bottom-6 left-4 right-4 max-w-lg mx-auto z-50"
         >
           <div className="flex flex-col space-y-2">
-            <button 
+            <button
               onClick={() => setCurrentView('active-session')}
               className="w-full hardware-card p-4 bg-transparent text-accent flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.8)] active:scale-95 transition-transform border border-accent"
             >
@@ -271,12 +309,21 @@ export default function App() {
                 </div>
               </div>
               <div className="flex items-center space-x-2 bg-transparent text-accent border border-accent px-4 py-2 rounded-full font-black text-[10px] tracking-widest">
-                  CONTINUA
+                CONTINUA
               </div>
             </button>
           </div>
         </motion.div>
       )}
+
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        title={modalState.title}
+        message={modalState.message}
+        icon={modalState.icon}
+        actions={modalState.actions}
+      />
     </div>
   );
 }

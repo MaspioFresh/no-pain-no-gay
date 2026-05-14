@@ -2,6 +2,7 @@ import React from 'react';
 import { WorkoutPlan, WeightUnit } from '../types';
 import { Play, ClipboardList, Plus, History as HistoryIcon, Download, Settings, Settings2, Trash2, Edit2, TrendingUp } from 'lucide-react';
 import { motion } from 'motion/react';
+import { Modal, useModal } from './Modal';
 
 interface DashboardProps {
   plans: WorkoutPlan[];
@@ -16,9 +17,12 @@ interface DashboardProps {
   onViewHistory: () => void;
   onViewProgress: () => void;
   onManageData: () => void;
+  hasActiveSession?: boolean;
+  onResumeSession?: () => void;
 }
 
-export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, onModifyPlan, onDeletePlan, onAddPlan, onCreatePlan, onViewHistory, onViewProgress, onManageData }: DashboardProps) {
+export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, onModifyPlan, onDeletePlan, onAddPlan, onCreatePlan, onViewHistory, onViewProgress, onManageData, hasActiveSession, onResumeSession }: DashboardProps) {
+  const { modalState, closeModal, showAlert, showConfirm } = useModal();
   const exportPlan = (plan: WorkoutPlan) => {
     const data = { version: '1.0', type: 'single_plan', plan };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -38,14 +42,13 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
       try {
         const imported = JSON.parse(event.target?.result as string);
         if (imported.type === 'single_plan' && imported.plan) {
-          // Pass to parent via a new prop or just call existing onAddPlan
           onAddPlan?.(imported.plan);
-          alert(`Scheda "${imported.plan.name}" importata!`);
+          showAlert('Scheda importata', `Scheda "${imported.plan.name}" importata con successo!`, 'success');
         } else {
-          alert('Formato file non valido per una singola scheda.');
+          showAlert('Formato non valido', 'Il file selezionato non è una scheda valida.', 'warning');
         }
       } catch (err) {
-        alert('Errore lettura JSON.');
+        showAlert('Errore', 'Errore durante la lettura del file JSON.', 'warning');
       }
     };
     reader.readAsText(file);
@@ -59,38 +62,40 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
           <h1 className="text-4xl font-extrabold tracking-tighter uppercase italic">
             No Pain <span className="accent-text">No Gay</span>
           </h1>
-          <button 
-            onClick={onToggleUnit}
-            className="hardware-card px-3 py-1 text-[10px] mono-label flex items-center space-x-2 bg-transparent border border-accent text-accent"
+          <button
+            onClick={onManageData}
+            className="p-2 bg-white/5 rounded-full border border-white/10 text-white hover:text-accent hover:border-accent/40 hover:bg-accent/10 transition-all active:scale-90"
+            title="Impostazioni"
           >
-            <Settings2 size={12} className="accent-text" />
-            <span>UNITS: {unit.toUpperCase()}</span>
+            <Settings2 size={20} />
           </button>
         </div>
-        <p className="mono-label underline decoration-accent/30 underline-offset-4">Piattaforma di addestramento professionale</p>
       </header>
 
-      <div className="grid grid-cols-3 gap-4">
-        <button 
+      {hasActiveSession && (
+        <button
+          onClick={onResumeSession}
+          className="w-full py-4 bg-accent/20 text-accent font-black rounded-xl shadow-[0_0_20px_rgba(220,252,4,0.2)] border border-accent hover:bg-accent/30 active:scale-95 transition-all tracking-widest flex items-center justify-center space-x-2"
+        >
+          <Play size={20} className="fill-current" />
+          <span>RIPRENDI ALLENAMENTO IN CORSO</span>
+        </button>
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        <button
           onClick={onViewHistory}
           className="hardware-card p-4 flex flex-col items-center justify-center space-y-2 hover:bg-accent/10 border-accent/10 hover:border-accent/40 transition-all active:scale-95 group shadow-[0_0_20px_rgba(220,252,4,0.05)]"
         >
           <HistoryIcon size={24} className="text-accent" />
           <span className="mono-label text-accent font-bold text-[10px]">Storia</span>
         </button>
-        <button 
+        <button
           onClick={onViewProgress}
           className="hardware-card p-4 flex flex-col items-center justify-center space-y-2 hover:bg-accent/10 border-accent/10 hover:border-accent/40 transition-all active:scale-95 group shadow-[0_0_20px_rgba(220,252,4,0.05)]"
         >
           <TrendingUp size={24} className="text-accent" />
           <span className="mono-label text-accent font-bold text-[10px]">Progressi</span>
-        </button>
-        <button 
-          onClick={onManageData}
-          className="hardware-card p-4 flex flex-col items-center justify-center space-y-2 hover:bg-accent/10 border-accent/10 hover:border-accent/40 transition-all active:scale-95 group shadow-[0_0_20px_rgba(220,252,4,0.05)]"
-        >
-          <Download size={24} className="text-accent" />
-          <span className="mono-label text-accent font-bold text-[10px]">Dati</span>
         </button>
       </div>
 
@@ -98,12 +103,12 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
         <div className="flex items-center justify-between">
           <h2 className="mono-label">Schede di Allenamento</h2>
           <div className="flex items-center space-x-2">
-            <label className="flex items-center space-x-1 px-3 py-1.5 bg-transparent rounded-full border border-accent text-accent text-[10px] mono-label cursor-pointer hover:bg-accent/10 active:scale-95 transition-all">
+            <label className="flex items-center space-x-1 px-3 py-1.5 bg-transparent text-accent rounded-full font-bold text-[10px] shadow-[0_0_15px_rgba(220,252,4,0.1)] hover:bg-accent/10 active:scale-95 transition-all border border-accent">
               <Download size={12} className="rotate-180 text-accent" />
               <span>IMPORTA</span>
               <input type="file" accept=".json" onChange={handleImportPlan} className="hidden" />
             </label>
-            <button 
+            <button
               onClick={onCreatePlan}
               className="flex items-center space-x-1 px-3 py-1.5 bg-transparent text-accent rounded-full font-bold text-[10px] shadow-[0_0_15px_rgba(220,252,4,0.1)] hover:bg-accent/10 active:scale-95 transition-all border border-accent"
             >
@@ -120,14 +125,20 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
         ) : (
           <div className="space-y-4">
             {plans.map((plan) => (
-              <motion.div 
+              <motion.div
                 key={plan.id}
                 whileTap={{ scale: 0.98 }}
                 className="hardware-card p-4 flex items-center justify-between group bg-white/[0.02]"
               >
                 <div className="flex items-center space-x-4">
                   <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
-                    <ClipboardList size={20} className="text-white/40" />
+                    <button
+                      onClick={() => onViewPlan?.(plan)}
+                      className="p-2 text-ghost rounded-full transition-all active:scale-90"
+                      title="Dettagli Scheda"
+                    >
+                      <ClipboardList size={20} className="stroke-[2.5]" />
+                    </button>
                   </div>
                   <div>
                     <h3 className="font-bold text-lg leading-none mb-1">{plan.name}</h3>
@@ -135,28 +146,21 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
                   </div>
                 </div>
                 <div className="flex items-center space-x-1">
-                  <button 
-                    onClick={() => onViewPlan?.(plan)}
-                    className="p-2 text-accent hover:bg-accent/20 rounded-full transition-all active:scale-90"
-                    title="Dettagli Scheda"
-                  >
-                    <ClipboardList size={14} className="stroke-[2.5]" />
-                  </button>
-                  <button 
+                  <button
                     onClick={() => onModifyPlan?.(plan)}
                     className="p-2 text-accent hover:bg-accent/20 rounded-full transition-all active:scale-90"
                     title="Modifica Scheda"
                   >
                     <Edit2 size={14} className="stroke-[2.5]" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => exportPlan(plan)}
                     className="p-2 text-accent hover:bg-accent/20 rounded-full transition-all active:scale-90"
                     title="Esporta Scheda"
                   >
                     <Download size={14} className="stroke-[2.5]" />
                   </button>
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onDeletePlan(plan.id);
@@ -166,7 +170,7 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
                   >
                     <Trash2 size={16} />
                   </button>
-                  <button 
+                  <button
                     onClick={() => onStartPlan(plan)}
                     className="w-10 h-10 rounded-full bg-transparent text-accent flex items-center justify-center shadow-[0_0_15px_rgba(220,252,4,0.1)] hover:scale-110 hover:bg-accent/10 active:scale-90 transition-all ml-1 group border border-accent"
                   >
@@ -179,15 +183,14 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
         )}
       </div>
 
-      <div className="hardware-card p-6 border-accent/20 bg-accent/5">
-        <div className="flex items-center space-x-3 mb-2">
-          <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          <span className="mono-label text-accent">Stato Sistema</span>
-        </div>
-        <p className="text-sm text-white/70">
-          Tutti i moduli sono operativi. L'allenamento quotidiano è consigliato per una crescita ottimale.
-        </p>
-      </div>
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        title={modalState.title}
+        message={modalState.message}
+        icon={modalState.icon}
+        actions={modalState.actions}
+      />
     </div>
   );
 }
