@@ -64,7 +64,7 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
           </h1>
           <button
             onClick={onManageData}
-            className="p-2 bg-white/5 rounded-full border border-white/10 text-white hover:text-accent hover:border-accent/40 hover:bg-accent/10 transition-all active:scale-90"
+            className="btn-icon"
             title="Impostazioni"
           >
             <Settings2 size={20} />
@@ -75,7 +75,7 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
       {hasActiveSession && (
         <button
           onClick={onResumeSession}
-          className="w-full py-4 bg-accent/20 text-accent font-black rounded-xl shadow-[0_0_20px_rgba(220,252,4,0.2)] border border-accent hover:bg-accent/30 active:scale-95 transition-all tracking-widest flex items-center justify-center space-x-2"
+          className="w-full btn-secondary py-4 tracking-widest flex items-center justify-center space-x-2"
         >
           <Play size={20} className="fill-current" />
           <span>RIPRENDI ALLENAMENTO IN CORSO</span>
@@ -103,14 +103,14 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
         <div className="flex items-center justify-between">
           <h2 className="mono-label">Schede di Allenamento</h2>
           <div className="flex items-center space-x-2">
-            <label className="flex items-center space-x-1 px-3 py-1.5 bg-transparent text-accent rounded-full font-bold text-[10px] shadow-[0_0_15px_rgba(220,252,4,0.1)] hover:bg-accent/10 active:scale-95 transition-all border border-accent">
+            <label className="flex items-center space-x-1 px-3 py-1.5 btn-outline">
               <Download size={12} className="rotate-180 text-accent" />
               <span>IMPORTA</span>
               <input type="file" accept=".json" onChange={handleImportPlan} className="hidden" />
             </label>
             <button
               onClick={onCreatePlan}
-              className="flex items-center space-x-1 px-3 py-1.5 bg-transparent text-accent rounded-full font-bold text-[10px] shadow-[0_0_15px_rgba(220,252,4,0.1)] hover:bg-accent/10 active:scale-95 transition-all border border-accent"
+              className="flex items-center space-x-1 px-3 py-1.5 btn-outline"
             >
               <Plus size={12} className="text-accent" />
               <span className="text-accent">NUOVA</span>
@@ -148,14 +148,14 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
                 <div className="flex items-center space-x-1">
                   <button
                     onClick={() => onModifyPlan?.(plan)}
-                    className="p-2 text-accent hover:bg-accent/20 rounded-full transition-all active:scale-90"
+                    className="btn-icon text-accent hover:bg-accent/20"
                     title="Modifica Scheda"
                   >
                     <Edit2 size={14} className="stroke-[2.5]" />
                   </button>
                   <button
                     onClick={() => exportPlan(plan)}
-                    className="p-2 text-accent hover:bg-accent/20 rounded-full transition-all active:scale-90"
+                    className="btn-icon text-accent hover:bg-accent/20"
                     title="Esporta Scheda"
                   >
                     <Download size={14} className="stroke-[2.5]" />
@@ -165,7 +165,7 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
                       e.stopPropagation();
                       onDeletePlan(plan.id);
                     }}
-                    className="p-2 text-red-500/30 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all active:scale-90"
+                    className="btn-icon text-red-500/30 hover:text-red-500 hover:bg-red-500/10"
                     title="Elimina Scheda"
                   >
                     <Trash2 size={16} />

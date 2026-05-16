@@ -141,16 +141,16 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
     <div className="flex flex-col space-y-8 animate-in fade-in duration-300 pb-12">
       <header className="flex items-center justify-between sticky top-0 bg-[#0c0d0e]/95 backdrop-blur-md z-10 py-4 border-b border-white/10 px-1">
         <div className="flex items-center space-x-4">
-          <button onClick={onCancel} className="p-2 rounded-full bg-white/5 text-white hover:bg-white/10">
+          <button onClick={onCancel} className="btn-icon">
             <ArrowLeft size={20} />
           </button>
           <h2 className="text-xl font-bold">{existingPlan ? 'Modifica Scheda' : 'Nuova Scheda'}</h2>
         </div>
         <button
           onClick={handleSave}
-          className="bg-black text-accent p-2 px-6 rounded-full font-black flex items-center space-x-2 shadow-[0_0_20px_rgba(220,252,4,0.15)] hover:scale-105 active:scale-95 transition-all text-xs border border-accent/40 uppercase tracking-widest"
+          className="btn-primary py-2 px-6 text-xs tracking-widest"
         >
-          <Save size={16} className="text-accent" />
+          <Save size={16} />
           <span>SALVA</span>
         </button>
       </header>
@@ -163,7 +163,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="es. Spinta, Gambe, Upper Body..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-xl font-bold focus:outline-none focus:ring-2 focus:ring-accent"
+            className="w-full input-text text-xl font-bold"
           />
         </div>
 
@@ -239,7 +239,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                         <select
                           value={exercise.type || 'barbell'}
                           onChange={(e) => updateExercise(exercise.id, { type: e.target.value as ExerciseType })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-accent appearance-none"
+                          className="w-full input-select"
                           style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem top 50%', backgroundSize: '0.65rem auto' }}
                         >
                           <option value="barbell" className="bg-[#151619]">Bilanciere</option>
@@ -266,11 +266,11 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                             value={exercise.imageUrl || ''}
                             onChange={(e) => updateExercise(exercise.id, { imageUrl: e.target.value })}
                             placeholder="Link immagine (URL)..."
-                            className="flex-1 bg-white/5 border border-white/10 rounded-lg p-2 text-xs focus:outline-none focus:ring-1 focus:ring-accent"
+                            className="flex-1 input-text p-2 text-xs"
                           />
                           <button
                             onClick={() => updateExercise(exercise.id, { imageUrl: undefined })}
-                            className="p-2 text-white/30 hover:text-red-500 rounded-lg bg-white/5 border border-white/10"
+                            className="btn-icon rounded-lg p-2 border border-white/10"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -302,14 +302,14 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                                     value={set.reps || ''}
                                     onChange={(e) => updateTargetSet(exercise.id, sIdx, 'reps', parseInt(e.target.value))}
                                     placeholder="Rip"
-                                    className="w-full bg-white/5 rounded px-2 py-1 text-sm font-mono focus:outline-none text-center"
+                                    className="input-number-small"
                                   />
                                   <input
                                     type="number"
                                     value={set.weight || ''}
                                     onChange={(e) => updateTargetSet(exercise.id, sIdx, 'weight', parseFloat(e.target.value))}
                                     placeholder="Peso"
-                                    className="w-full bg-white/5 rounded px-2 py-1 text-sm font-mono focus:outline-none text-center"
+                                    className="input-number-small"
                                   />
                                 </>
                               )}
@@ -325,7 +325,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                                         updateTargetSet(exercise.id, sIdx, 'timeSeconds', m * 60 + s);
                                       }}
                                       placeholder="min"
-                                      className="w-full bg-white/5 rounded px-1 py-1 text-sm font-mono focus:outline-none text-center"
+                                      className="input-number-small px-1"
                                     />
                                     <span className="text-white/30 self-center">:</span>
                                     <input
@@ -337,7 +337,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                                         updateTargetSet(exercise.id, sIdx, 'timeSeconds', m * 60 + s);
                                       }}
                                       placeholder="sec"
-                                      className="w-full bg-white/5 rounded px-1 py-1 text-sm font-mono focus:outline-none text-center"
+                                      className="input-number-small px-1"
                                     />
                                   </div>
                                   <input
@@ -345,7 +345,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                                     value={set.weight || ''}
                                     onChange={(e) => updateTargetSet(exercise.id, sIdx, 'weight', parseFloat(e.target.value))}
                                     placeholder="+Kg"
-                                    className="w-full bg-white/5 rounded px-2 py-1 text-sm font-mono focus:outline-none text-center"
+                                    className="input-number-small"
                                   />
                                 </>
                               )}
@@ -362,7 +362,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                                         updateTargetSet(exercise.id, sIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                       }}
                                       placeholder="h"
-                                      className="w-full bg-white/5 rounded px-1 py-1 text-xs font-mono focus:outline-none text-center"
+                                      className="input-number-small px-1 text-xs"
                                     />
                                     <span className="text-white/30 self-center">:</span>
                                     <input
@@ -375,7 +375,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                                         updateTargetSet(exercise.id, sIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                       }}
                                       placeholder="m"
-                                      className="w-full bg-white/5 rounded px-1 py-1 text-xs font-mono focus:outline-none text-center"
+                                      className="input-number-small px-1 text-xs"
                                     />
                                     <span className="text-white/30 self-center">:</span>
                                     <input
@@ -388,7 +388,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                                         updateTargetSet(exercise.id, sIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                       }}
                                       placeholder="s"
-                                      className="w-full bg-white/5 rounded px-1 py-1 text-xs font-mono focus:outline-none text-center"
+                                      className="input-number-small px-1 text-xs"
                                     />
                                   </div>
                                   <input
@@ -396,7 +396,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                                     value={set.distance || ''}
                                     onChange={(e) => updateTargetSet(exercise.id, sIdx, 'distance', parseFloat(e.target.value))}
                                     placeholder="Dist"
-                                    className="w-[60%] bg-white/5 rounded px-2 py-1 text-sm font-mono focus:outline-none text-center"
+                                    className="input-number-small w-[60%]"
                                   />
                                 </>
                               )}
@@ -418,7 +418,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                         value={exercise.notes || ''}
                         onChange={(e) => updateExercise(exercise.id, { notes: e.target.value })}
                         placeholder="es. Focus sul petto alto, 2 min recupero..."
-                        className="w-full bg-white/5 rounded-lg p-2 text-xs focus:outline-none focus:ring-1 focus:ring-accent min-h-[60px] resize-none"
+                        className="input-textarea"
                       />
                     </div>
 
@@ -431,12 +431,12 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                             value={exercise.barbellWeight || ''}
                             onChange={(e) => updateExercise(exercise.id, { barbellWeight: parseFloat(e.target.value) })}
                             placeholder="0"
-                            className="w-12 bg-white/5 text-[10px] p-1 rounded text-center focus:outline-none"
+                            className="input-number-small w-12 text-[10px] p-1"
                           />
                           <span className="text-[10px] text-white/30 uppercase">kg</span>
                         </div>
                       )}
-
+ 
                       <div className={`flex items-center space-x-2 ${(!exercise.type || exercise.type === 'barbell') ? 'border-l border-white/10 pl-4' : ''}`}>
                         <span className="text-[10px] text-white/30 uppercase">Recupero:</span>
                         <input
@@ -444,7 +444,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                           value={exercise.restSeconds || ''}
                           onChange={(e) => updateExercise(exercise.id, { restSeconds: parseInt(e.target.value) })}
                           placeholder="60"
-                          className="w-12 bg-white/5 text-[10px] p-1 rounded text-center focus:outline-none"
+                          className="input-number-small w-12 text-[10px] p-1"
                         />
                         <span className="text-[10px] text-white/30 uppercase">sec</span>
                       </div>
@@ -457,7 +457,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
 
           <button
             onClick={addExercise}
-            className="w-full py-4 border-2 border-dashed border-accent/30 rounded-xl text-accent hover:text-accent hover:border-accent hover:bg-accent/10 transition-all flex items-center justify-center space-x-2 bg-accent/5 active:scale-[0.98] shadow-[0_0_15px_rgba(220,252,4,0.05)]"
+            className="w-full btn-secondary border-dashed border-2 py-4 shadow-[0_0_15px_rgba(220,252,4,0.05)]"
           >
             <Plus size={20} className="text-accent stroke-[3]" />
             <span className="mono-label font-black tracking-widest text-accent">Aggiungi Esercizio</span>

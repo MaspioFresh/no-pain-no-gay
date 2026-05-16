@@ -385,12 +385,12 @@ export function WorkoutSessionLogger({
         {/* Row 1: title + buttons */}
         <div className="flex items-center justify-between py-3">
           <div className="flex items-center space-x-3">
-            <button onClick={onCancel} className="p-2 rounded-full bg-transparent border border-accent text-accent hover:bg-accent/10" title="Riduci a icona">
+            <button onClick={onCancel} className="btn-icon-accent" title="Riduci a icona">
               <ArrowLeft size={20} />
             </button>
             <button 
               onClick={() => setFocusMode(!focusMode)} 
-              className={`p-2 rounded-full border transition-all ${focusMode ? 'bg-accent border-accent text-[#0c0d0e]' : 'bg-transparent border-white/20 text-white/40 hover:border-accent hover:text-accent'}`}
+              className={`p-2 rounded-full border transition-all ${focusMode ? 'bg-accent border-accent text-[#0c0d0e]' : 'btn-icon text-white/40 hover:border-accent border-white/20'}`}
               title={focusMode ? "Disattiva Focus Mode" : "Attiva Focus Mode"}
             >
               <ScanLine size={20} />
@@ -403,14 +403,14 @@ export function WorkoutSessionLogger({
           <div className="flex space-x-2">
             <button
               onClick={onFinish}
-              className="p-2 rounded-full bg-transparent border border-red-500 text-red-500 hover:bg-red-500/10 active:scale-95 transition-all flex items-center justify-center"
+              className="btn-icon-danger"
               title="Annulla Allenamento"
             >
               <X size={20} className="stroke-[3]" />
             </button>
             <button
               onClick={handleSave}
-              className="rounded-full bg-transparent text-accent font-extrabold flex items-center space-x-2 px-4 py-2 shadow-[0_0_20px_rgba(220,252,4,0.15)] hover:bg-accent/10 active:scale-95 transition-all text-sm border border-accent"
+              className="btn-outline px-4 py-2 flex items-center space-x-2 text-sm"
             >
               <Check size={18} className="text-accent stroke-[3]" />
               <span className="text-accent uppercase tracking-widest font-black">Fine</span>
@@ -609,7 +609,7 @@ export function WorkoutSessionLogger({
                                                   value={set.distance || ''}
                                                   onChange={(e) => updateSet(exIdx, setIdx, 'distance', parseFloat(e.target.value))}
                                                   placeholder={targetSet?.distance ? `${targetSet.distance}` : (prevSet?.distance ? `${prevSet.distance}` : '0')}
-                                                  className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                                  className="input-number-small"
                                                 />
                                               ) : (
                                                 <>
@@ -626,7 +626,7 @@ export function WorkoutSessionLogger({
                                                       }
                                                     }}
                                                     placeholder={weightPlaceholder}
-                                                    className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                                    className="input-number-small"
                                                   />
                                                   {!isPerSide && platesPerSide > 0 && (!exercise.type || exercise.type === 'barbell' || exercise.type === 'plateLoaded') && (
                                                     <span className="text-[7px] font-mono text-accent/40 text-center uppercase tracking-tighter">
@@ -663,7 +663,7 @@ export function WorkoutSessionLogger({
                                                     updateSet(exIdx, setIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                                   }}
                                                   placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 3600)}` : 'h'}
-                                                  className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                                  className="input-number-small"
                                                 />
                                                 <span className="text-white/30 self-center">:</span>
                                                 <input
@@ -676,7 +676,7 @@ export function WorkoutSessionLogger({
                                                     updateSet(exIdx, setIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                                   }}
                                                   placeholder={targetSet?.timeSeconds ? `${Math.floor((targetSet.timeSeconds % 3600) / 60)}` : 'm'}
-                                                  className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                                  className="input-number-small"
                                                 />
                                                 <span className="text-white/30 self-center">:</span>
                                                 <input
@@ -689,7 +689,7 @@ export function WorkoutSessionLogger({
                                                     updateSet(exIdx, setIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                                   }}
                                                   placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
-                                                  className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                                  className="input-number-small"
                                                 />
                                               </div>
                                             ) : exercise.type === 'time' ? (
@@ -703,7 +703,7 @@ export function WorkoutSessionLogger({
                                                     updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
                                                   }}
                                                   placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 60)}` : 'm'}
-                                                  className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                                  className="input-number-small"
                                                 />
                                                 <span className="text-white/30 self-center">:</span>
                                                 <input
@@ -715,7 +715,7 @@ export function WorkoutSessionLogger({
                                                     updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
                                                   }}
                                                   placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
-                                                  className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                                  className="input-number-small"
                                                 />
                                               </div>
                                             ) : (
@@ -724,7 +724,7 @@ export function WorkoutSessionLogger({
                                                 value={set.reps || ''}
                                                 onChange={(e) => updateSet(exIdx, setIdx, 'reps', parseInt(e.target.value))}
                                                 placeholder={targetSet?.reps ? `${targetSet.reps}` : (prevSet?.reps ? `${prevSet.reps}` : '0')}
-                                                className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                                className="input-number-small"
                                               />
                                             )}
                                           </div>
@@ -757,7 +757,7 @@ export function WorkoutSessionLogger({
                         <div className="flex space-x-2">
                           <button
                             onClick={() => { group.items.forEach((i: any) => addSet(i.exIdx)); }}
-                            className="flex-1 py-3 rounded-xl border-2 border-dashed border-accent text-accent hover:text-accent hover:bg-accent/10 transition-all flex items-center justify-center space-x-2 text-[10px] mono-label font-black tracking-widest bg-transparent"
+                            className="flex-1 btn-secondary border-dashed border-2 py-3 text-[10px] mono-label tracking-widest"
                           >
                             <Plus size={14} className="stroke-[3]" />
                             <span>AGGIUNGI SET {group.isSuperset ? 'A TUTTI' : ''}</span>
@@ -955,7 +955,7 @@ export function WorkoutSessionLogger({
                                           value={set.distance || ''}
                                           onChange={(e) => updateSet(exIdx, setIdx, 'distance', parseFloat(e.target.value))}
                                           placeholder={targetSet?.distance ? `${targetSet.distance}` : (prevSet?.distance ? `${prevSet.distance}` : '0')}
-                                          className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                          className="input-number-small"
                                         />
                                       ) : (
                                         <>
@@ -964,7 +964,7 @@ export function WorkoutSessionLogger({
                                             value={weightDisplayVal}
                                             onChange={(e) => handleWeightChange(e.target.value)}
                                             placeholder={weightPlaceholder}
-                                            className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                            className="input-number-small"
                                           />
                                           {!isPerSide && platesPerSide > 0 && (!exercise.type || exercise.type === 'barbell' || exercise.type === 'plateLoaded') && (
                                             <span className="text-[7px] font-mono text-accent/40 text-center uppercase tracking-tighter">
@@ -1003,7 +1003,7 @@ export function WorkoutSessionLogger({
                                             updateSet(exIdx, setIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                           }}
                                           placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 3600)}` : 'h'}
-                                          className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                          className="input-number-small"
                                         />
                                         <span className="text-white/30 self-center">:</span>
                                         <input
@@ -1016,7 +1016,7 @@ export function WorkoutSessionLogger({
                                             updateSet(exIdx, setIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                           }}
                                           placeholder={targetSet?.timeSeconds ? `${Math.floor((targetSet.timeSeconds % 3600) / 60)}` : 'm'}
-                                          className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                          className="input-number-small"
                                         />
                                         <span className="text-white/30 self-center">:</span>
                                         <input
@@ -1029,7 +1029,7 @@ export function WorkoutSessionLogger({
                                             updateSet(exIdx, setIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                           }}
                                           placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
-                                          className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                          className="input-number-small"
                                         />
                                       </div>
                                     ) : exercise.type === 'time' ? (
@@ -1043,7 +1043,7 @@ export function WorkoutSessionLogger({
                                             updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
                                           }}
                                           placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 60)}` : 'm'}
-                                          className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                          className="input-number-small"
                                         />
                                         <span className="text-white/30 self-center">:</span>
                                         <input
@@ -1055,7 +1055,7 @@ export function WorkoutSessionLogger({
                                             updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
                                           }}
                                           placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
-                                          className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                          className="input-number-small"
                                         />
                                       </div>
                                     ) : (
@@ -1064,7 +1064,7 @@ export function WorkoutSessionLogger({
                                         value={set.reps || ''}
                                         onChange={(e) => updateSet(exIdx, setIdx, 'reps', parseInt(e.target.value))}
                                         placeholder={targetSet?.reps ? `${targetSet.reps}` : (prevSet?.reps ? `${prevSet.reps}` : '0')}
-                                        className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                        className="input-number-small"
                                       />
                                     )}
                                   </div>
@@ -1097,7 +1097,7 @@ export function WorkoutSessionLogger({
                 <div className="flex space-x-2">
                   <button
                     onClick={() => { group.items.forEach((i: any) => addSet(i.exIdx)); }}
-                    className="flex-1 py-3 rounded-xl border-2 border-dashed border-accent text-accent hover:text-accent hover:bg-accent/10 transition-all flex items-center justify-center space-x-2 text-[10px] mono-label font-black tracking-widest bg-transparent"
+                    className="flex-1 btn-secondary border-dashed border-2 py-3 text-[10px] mono-label tracking-widest"
                   >
                     <Plus size={14} className="stroke-[3]" />
                     <span>AGGIUNGI SET {group.isSuperset ? 'A TUTTI' : ''}</span>
@@ -1223,3 +1223,5 @@ export function WorkoutSessionLogger({
     </div>
   );
 }
+
+

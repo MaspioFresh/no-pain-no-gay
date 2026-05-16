@@ -67,7 +67,7 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
   return (
     <div className="flex flex-col space-y-8 animate-in fade-in duration-300 pb-24">
       <header className="flex items-center space-x-4">
-        <button onClick={onBack} className="p-2 rounded-full bg-white/5 text-white hover:text-accent hover:bg-accent/10 transition-colors">
+        <button onClick={onBack} className="btn-icon">
           <ArrowLeft size={20} />
         </button>
         <h2 className="text-2xl font-bold">Impostazioni</h2>
@@ -236,15 +236,15 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
           <div className="space-y-3">
             <button
               onClick={exportData}
-              className="w-full py-3 rounded-lg bg-accent/10 border border-accent/20 text-accent hover:bg-accent/20 transition-all flex items-center justify-center space-x-2 active:scale-95 shadow-[0_0_15px_rgba(220,252,4,0.1)]"
+              className="w-full btn-secondary"
             >
               <Download size={18} className="stroke-[3]" />
               <span className="mono-label font-bold">Esporta Backup (JSON)</span>
             </button>
 
-            <label className="w-full py-3 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-95">
+            <label className="w-full btn-ghost text-white hover:text-white hover:bg-white/10 flex items-center justify-center space-x-2">
               <Upload size={18} />
-              <span className="mono-label font-bold">Importa Backup</span>
+              <span className="mono-label font-bold text-white">Importa Backup</span>
               <input type="file" accept=".json" onChange={handleImport} className="hidden" />
             </label>
           </div>
@@ -261,10 +261,10 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
           </p>
           <button
             onClick={clearAllData}
-            className="w-full py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 transition-all flex items-center justify-center space-x-2"
+            className="w-full btn-danger"
           >
-            <Trash2 size={18} />
-            <span className="mono-label">Reset Fabbrica</span>
+            <Trash2 size={18} className="stroke-[3]" />
+            <span className="uppercase tracking-widest font-black text-sm">Reset Fabbrica</span>
           </button>
         </div>
       </div>

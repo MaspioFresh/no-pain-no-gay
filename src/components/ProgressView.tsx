@@ -110,7 +110,7 @@ export function ProgressView({ sessions, plans, settings, onBack }: ProgressView
   return (
     <div className="flex flex-col space-y-6 pb-24 animate-in fade-in duration-300">
       <header className="flex items-center space-x-4 py-4 border-b border-white/10">
-        <button onClick={onBack} className="p-2 rounded-full bg-transparent border border-accent text-accent hover:bg-accent/10 transition-colors">
+        <button onClick={onBack} className="btn-icon-accent">
           <ArrowLeft size={20} />
         </button>
         <div className="flex items-center space-x-2">
@@ -127,7 +127,7 @@ export function ProgressView({ sessions, plans, settings, onBack }: ProgressView
             <select
               value={selectedPlanId}
               onChange={(e) => setSelectedPlanId(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              className="w-full input-select"
             >
               {plans.map(p => (
                 <option key={p.id} value={p.id} className="bg-[#151619]">{p.name}</option>
@@ -139,7 +139,7 @@ export function ProgressView({ sessions, plans, settings, onBack }: ProgressView
             <select
               value={selectedExerciseId}
               onChange={(e) => setSelectedExerciseId(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              className="w-full input-select"
               disabled={!selectedPlan}
             >
               {selectedPlan?.exercises.map(ex => (

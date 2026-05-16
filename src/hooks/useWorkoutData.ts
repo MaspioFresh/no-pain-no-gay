@@ -4,28 +4,7 @@ import { AppData, WorkoutPlan, WorkoutSession } from '../types';
 const STORAGE_KEY = 'workout_data';
 
 const DEFAULT_DATA: AppData = {
-  plans: [
-    {
-      id: 'default-upper',
-      name: 'Upper Body',
-      exercises: [
-        { id: 'bench-press', name: 'Bench Press', barbellWeight: 20, targetSets: [{ reps: 8 }, { reps: 8 }, { reps: 8 }] },
-        { id: 'lat-pulldown', name: 'Lat Pulldown', barbellWeight: 0, targetSets: [{ reps: 10 }, { reps: 10 }, { reps: 10 }] },
-        { id: 'overhead-press', name: 'Overhead Press', barbellWeight: 20, targetSets: [{ reps: 8 }, { reps: 8 }, { reps: 8 }] },
-        { id: 'bicep-curl', name: 'Bicep Curl', barbellWeight: 10, targetSets: [{ reps: 12 }, { reps: 12 }, { reps: 12 }] },
-      ]
-    },
-    {
-      id: 'default-lower',
-      name: 'Lower Body',
-      exercises: [
-        { id: 'squat', name: 'Squat', barbellWeight: 20, targetSets: [{ reps: 8 }, { reps: 8 }, { reps: 8 }] },
-        { id: 'deadlift', name: 'Deadlift', barbellWeight: 20, targetSets: [{ reps: 5 }, { reps: 5 }, { reps: 5 }] },
-        { id: 'leg-extension', name: 'Leg Extension', barbellWeight: 0, targetSets: [{ reps: 12 }, { reps: 12 }, { reps: 12 }] },
-        { id: 'calf-raise', name: 'Calf Raise', barbellWeight: 0, targetSets: [{ reps: 15 }, { reps: 15 }, { reps: 15 }] },
-      ]
-    }
-  ],
+  plans: [],
   sessions: [],
   settings: {
     unit: 'kg',
@@ -42,7 +21,7 @@ export function useWorkoutData() {
   const [data, setData] = useState<AppData>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     const initial = stored ? JSON.parse(stored) : DEFAULT_DATA;
-    
+
     // Ensure settings exist for legacy data
     if (!initial.settings) initial.settings = { unit: 'kg', themeColor: '#dcfc04', weightEntryMode: 'total', barbellMode: 'total', dumbbellMode: 'total' };
     if (!initial.settings.themeColor) initial.settings.themeColor = '#dcfc04';
@@ -51,7 +30,7 @@ export function useWorkoutData() {
     if (!initial.settings.dumbbellMode) initial.settings.dumbbellMode = 'total';
     if (!initial.settings.plateLoadedMode) initial.settings.plateLoadedMode = 'total';
     if (initial.settings.defaultFocusMode === undefined) initial.settings.defaultFocusMode = false;
-    
+
     // Migrate and deduplicate plans
     if (initial.plans) {
       const seen = new Set();
@@ -77,7 +56,7 @@ export function useWorkoutData() {
         })
       }));
     }
-    
+
     return initial;
   });
 

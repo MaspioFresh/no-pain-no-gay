@@ -40,7 +40,7 @@ export function HistoryView({ sessions, plans, settings, onBack, onDeleteSession
   return (
     <div className="flex flex-col space-y-8 animate-in fade-in duration-300">
       <header className="flex items-center space-x-4">
-        <button onClick={onBack} className="p-2 rounded-full bg-white/5 text-white hover:text-accent hover:bg-accent/5 transition-colors">
+        <button onClick={onBack} className="btn-icon">
           <ArrowLeft size={20} />
         </button>
         <h2 className="text-2xl font-bold">Cronologia Allenamenti</h2>
@@ -74,7 +74,7 @@ export function HistoryView({ sessions, plans, settings, onBack, onDeleteSession
                       e.stopPropagation();
                       onEditSession(session);
                     }}
-                    className="p-2 text-white/20 hover:text-accent hover:bg-accent/10 rounded-full transition-all active:scale-90"
+                    className="btn-icon text-white/20 hover:text-accent hover:bg-accent/10"
                     title="Modifica"
                   >
                     <Edit2 size={16} />
@@ -84,7 +84,7 @@ export function HistoryView({ sessions, plans, settings, onBack, onDeleteSession
                       e.stopPropagation();
                       onDeleteSession(session.id);
                     }}
-                    className="p-2 text-white/20 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all active:scale-90"
+                    className="btn-icon text-white/20 hover:text-red-500 hover:bg-red-500/10"
                     title="Elimina"
                   >
                     <Trash2 size={16} />

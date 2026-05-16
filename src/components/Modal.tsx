@@ -73,12 +73,12 @@ export function Modal({ isOpen, onClose, title, message, icon = 'info', actions,
                       <button
                         key={i}
                         onClick={() => { action.onClick(); onClose(); }}
-                        className={`w-full py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-all active:scale-95 border ${
+                        className={`w-full ${
                           action.variant === 'danger'
-                            ? 'border-red-500 text-red-500 bg-transparent hover:bg-red-500/10'
+                            ? 'btn-danger'
                             : action.variant === 'ghost'
-                            ? 'border-white/10 text-white/40 bg-transparent hover:bg-white/5'
-                            : 'border-accent text-[#0c0d0e] bg-accent shadow-[0_0_20px_rgba(220,252,4,0.2)] hover:bg-accent/90'
+                            ? 'btn-ghost'
+                            : 'btn-primary'
                         }`}
                       >
                         {action.label}

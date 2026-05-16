@@ -47,6 +47,56 @@ body {
   background-color: var(--accent);
 }
 
+/* Consolidated Reusable Component Classes (Tailwind CSS v4 Utilities) */
+
+@utility btn-primary {
+  @apply py-3.5 px-6 bg-accent text-[#0c0d0e] font-black rounded-xl shadow-[0_0_20px_rgba(220,252,4,0.2)] border border-accent hover:bg-accent/90 active:scale-95 transition-all tracking-widest uppercase text-sm flex items-center justify-center space-x-2 cursor-pointer;
+}
+
+@utility btn-secondary {
+  @apply py-3 px-6 bg-accent/10 border border-accent/20 text-accent font-black rounded-xl hover:bg-accent/20 active:scale-95 transition-all flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(220,252,4,0.1)] cursor-pointer;
+}
+
+@utility btn-outline {
+  @apply bg-transparent text-accent border border-accent shadow-[0_0_15px_rgba(220,252,4,0.1)] hover:bg-accent/10 active:scale-95 transition-all rounded-full font-bold text-[10px] cursor-pointer;
+}
+
+@utility btn-ghost {
+  @apply border border-white/10 text-white/40 bg-transparent hover:bg-white/5 active:scale-95 transition-all py-3 rounded-xl font-bold text-sm uppercase tracking-widest cursor-pointer;
+}
+
+@utility btn-danger {
+  @apply py-3.5 px-6 bg-red-500/10 border border-red-500/30 text-red-500 font-black rounded-xl hover:bg-red-500/20 active:scale-95 transition-all flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(239,68,68,0.1)] cursor-pointer;
+}
+
+@utility btn-icon {
+  @apply p-2 rounded-full bg-white/5 text-white hover:text-accent hover:bg-accent/10 transition-colors active:scale-90 flex items-center justify-center cursor-pointer;
+}
+
+@utility btn-icon-accent {
+  @apply p-2 rounded-full bg-transparent border border-accent text-accent hover:bg-accent/10 active:scale-90 transition-all flex items-center justify-center cursor-pointer;
+}
+
+@utility btn-icon-danger {
+  @apply p-2 rounded-full bg-transparent border border-red-500 text-red-500 hover:bg-red-500/10 active:scale-90 transition-all flex items-center justify-center cursor-pointer;
+}
+
+@utility input-text {
+  @apply w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:ring-2 focus:ring-accent transition-all placeholder:text-white/30;
+}
+
+@utility input-select {
+  @apply w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-accent transition-all;
+}
+
+@utility input-textarea {
+  @apply w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white/80 placeholder:text-white/30 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all resize-none min-h-[60px];
+}
+
+@utility input-number-small {
+  @apply w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center text-white focus:outline-none focus:ring-1 focus:ring-accent transition-colors;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -72,3 +122,4 @@ input[type='number']::-webkit-outer-spin-button {
 input[type='number'] {
   -moz-appearance: textfield; /* Firefox */
 }
+
