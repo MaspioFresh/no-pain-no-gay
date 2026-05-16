@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/no-pain-no-gay/sw.js', { scope: '/no-pain-no-gay/' })})}
