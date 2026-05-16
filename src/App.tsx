@@ -133,6 +133,18 @@ export default function App() {
     setCurrentView('dashboard');
   };
 
+  const handleUpdatePlanExerciseNotes = (exerciseId: string, notes: string) => {
+    if (!activePlan) return;
+    const updatedPlan = {
+      ...activePlan,
+      exercises: activePlan.exercises.map(ex => 
+        ex.id === exerciseId ? { ...ex, notes } : ex
+      )
+    };
+    addPlan(updatedPlan);
+    setActivePlan(updatedPlan);
+  };
+
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':
@@ -205,6 +217,7 @@ export default function App() {
             startTime={startTime}
             previousSession={findPreviousSession(activePlan.id)}
             onSave={handleSaveSession}
+            onUpdatePlanExerciseNotes={handleUpdatePlanExerciseNotes}
             onCancel={() => {
               setCurrentView('dashboard');
             }}
@@ -225,6 +238,8 @@ export default function App() {
             }}
             barbellMode={data.settings.barbellMode}
             dumbbellMode={data.settings.dumbbellMode}
+            plateLoadedMode={data.settings.plateLoadedMode}
+            defaultFocusMode={data.settings.defaultFocusMode}
           />
         );
       case 'history':
@@ -232,6 +247,7 @@ export default function App() {
           <HistoryView
             sessions={data.sessions}
             plans={data.plans}
+            settings={data.settings}
             onBack={() => setCurrentView('dashboard')}
             onDeleteSession={deleteSession}
             onEditSession={handleEditSession}
@@ -251,6 +267,7 @@ export default function App() {
           <ProgressView
             sessions={data.sessions}
             plans={data.plans}
+            settings={data.settings}
             onBack={() => setCurrentView('dashboard')}
           />
         );

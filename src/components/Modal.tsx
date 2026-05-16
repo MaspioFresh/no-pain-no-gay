@@ -12,12 +12,13 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  message: string;
+  message?: string;
   icon?: 'info' | 'warning' | 'success';
   actions?: ModalAction[];
+  children?: React.ReactNode;
 }
 
-export function Modal({ isOpen, onClose, title, message, icon = 'info', actions }: ModalProps) {
+export function Modal({ isOpen, onClose, title, message, icon = 'info', actions, children }: ModalProps) {
   const IconComponent = icon === 'warning' ? AlertTriangle : icon === 'success' ? CheckCircle : Info;
   const iconColor = icon === 'warning' ? 'text-red-500' : icon === 'success' ? 'text-accent' : 'text-accent';
   const iconGlow = icon === 'warning' ? 'shadow-[0_0_30px_rgba(239,68,68,0.15)]' : 'shadow-[0_0_30px_rgba(220,252,4,0.1)]';
@@ -58,28 +59,34 @@ export function Modal({ isOpen, onClose, title, message, icon = 'info', actions 
               </button>
             </div>
 
-            {/* Message */}
-            <p className="text-sm text-white/60 leading-relaxed">{message}</p>
-
-            {/* Actions */}
-            {actions && actions.length > 0 && (
-              <div className="flex flex-col space-y-2">
-                {actions.map((action, i) => (
-                  <button
-                    key={i}
-                    onClick={() => { action.onClick(); onClose(); }}
-                    className={`w-full py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-all active:scale-95 border ${
-                      action.variant === 'danger'
-                        ? 'border-red-500 text-red-500 bg-transparent hover:bg-red-500/10'
-                        : action.variant === 'ghost'
-                        ? 'border-white/10 text-white/40 bg-transparent hover:bg-white/5'
-                        : 'border-accent text-[#0c0d0e] bg-accent shadow-[0_0_20px_rgba(220,252,4,0.2)] hover:bg-accent/90'
-                    }`}
-                  >
-                    {action.label}
-                  </button>
-                ))}
-              </div>
+            {/* Content */}
+            {children ? (
+              <div className="flex-1">{children}</div>
+            ) : (
+              <>
+                {message && <p className="text-sm text-white/60 leading-relaxed">{message}</p>}
+                
+                {/* Actions */}
+                {actions && actions.length > 0 && (
+                  <div className="flex flex-col space-y-2">
+                    {actions.map((action, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { action.onClick(); onClose(); }}
+                        className={`w-full py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-all active:scale-95 border ${
+                          action.variant === 'danger'
+                            ? 'border-red-500 text-red-500 bg-transparent hover:bg-red-500/10'
+                            : action.variant === 'ghost'
+                            ? 'border-white/10 text-white/40 bg-transparent hover:bg-white/5'
+                            : 'border-accent text-[#0c0d0e] bg-accent shadow-[0_0_20px_rgba(220,252,4,0.2)] hover:bg-accent/90'
+                        }`}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </motion.div>
         </>

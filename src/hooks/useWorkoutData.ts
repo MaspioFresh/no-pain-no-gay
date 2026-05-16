@@ -32,7 +32,9 @@ const DEFAULT_DATA: AppData = {
     themeColor: '#dcfc04',
     weightEntryMode: 'total',
     barbellMode: 'total',
-    dumbbellMode: 'total'
+    dumbbellMode: 'total',
+    plateLoadedMode: 'total',
+    defaultFocusMode: false
   }
 };
 
@@ -47,6 +49,8 @@ export function useWorkoutData() {
     if (!initial.settings.weightEntryMode) initial.settings.weightEntryMode = 'total';
     if (!initial.settings.barbellMode) initial.settings.barbellMode = initial.settings.weightEntryMode || 'total';
     if (!initial.settings.dumbbellMode) initial.settings.dumbbellMode = 'total';
+    if (!initial.settings.plateLoadedMode) initial.settings.plateLoadedMode = 'total';
+    if (initial.settings.defaultFocusMode === undefined) initial.settings.defaultFocusMode = false;
     
     // Migrate and deduplicate plans
     if (initial.plans) {

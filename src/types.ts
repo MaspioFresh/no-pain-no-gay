@@ -1,5 +1,5 @@
 export type WeightUnit = 'kg' | 'lb' | 'km' | 'm';
-export type ExerciseType = 'barbell' | 'dumbbell' | 'machine' | 'time' | 'cardio';
+export type ExerciseType = 'barbell' | 'dumbbell' | 'machine' | 'plateLoaded' | 'time' | 'cardio';
 
 export interface PlanSet {
   reps?: number;
@@ -42,6 +42,7 @@ export interface ExerciseSession {
   barbellWeightUsed?: number; // The weight of the barbell used in this session
   notes?: string; // Personal notes for this session
   supersetId?: string; // Historical superset link
+  weightModeUsed?: 'total' | 'perSide';
 }
 
 export interface AppSettings {
@@ -50,6 +51,8 @@ export interface AppSettings {
   weightEntryMode?: 'total' | 'perSide'; // legacy, keep for migration
   barbellMode?: 'total' | 'perSide';
   dumbbellMode?: 'total' | 'perSide';
+  plateLoadedMode?: 'total' | 'perSide';
+  defaultFocusMode?: boolean;
 }
 
 export interface WorkoutSession {

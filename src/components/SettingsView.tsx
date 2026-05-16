@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppData, AppSettings } from '../types';
-import { Download, Upload, Trash2, ArrowLeft, FileJson, Palette, Weight, Scale } from 'lucide-react';
+import { Download, Upload, Trash2, ArrowLeft, FileJson, Palette, Weight, Scale, ScanLine } from 'lucide-react';
 import { Modal, useModal } from './Modal';
 
 interface SettingsViewProps {
@@ -74,7 +74,7 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
       </header>
 
       <div className="grid gap-6">
-        
+
         {/* APP PREFERENCES */}
         <div className="hardware-card p-6 space-y-6">
           <div className="flex items-center space-x-3 mb-2 border-b border-white/5 pb-4">
@@ -108,13 +108,13 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
               <span>Unità di Misura Globale</span>
             </label>
             <div className="flex p-1 bg-white/5 rounded-xl">
-              <button 
+              <button
                 onClick={() => onUpdateSettings({ unit: 'kg' })}
                 className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${settings.unit === 'kg' ? 'bg-accent text-[#0c0d0e] shadow-[0_0_15px_rgba(220,252,4,0.2)]' : 'text-white/40 hover:text-white'}`}
               >
                 KG
               </button>
-              <button 
+              <button
                 onClick={() => onUpdateSettings({ unit: 'lb' })}
                 className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${settings.unit === 'lb' ? 'bg-accent text-[#0c0d0e] shadow-[0_0_15px_rgba(220,252,4,0.2)]' : 'text-white/40 hover:text-white'}`}
               >
@@ -130,7 +130,7 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
               <span>Modalità Inserimento Peso</span>
             </label>
             <p className="text-xs text-white/40 leading-relaxed">
-              <strong className="text-white/60">Peso Totale:</strong> inserisci il peso complessivo sollevato.<br/>
+              <strong className="text-white/60">Peso Totale:</strong> inserisci il peso complessivo sollevato.<br />
               <strong className="text-white/60">Peso a Lato:</strong> inserisci il carico di un singolo disco/manubrio — l'app raddoppia automaticamente nello storico.
             </p>
 
@@ -140,13 +140,13 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
                 <span>🏋️</span><span>Bilanciere</span>
               </div>
               <div className="flex p-1 bg-white/5 rounded-xl">
-                <button 
+                <button
                   onClick={() => onUpdateSettings({ barbellMode: 'total' })}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${settings.barbellMode === 'total' || !settings.barbellMode ? 'bg-accent text-[#0c0d0e] shadow-[0_0_15px_rgba(220,252,4,0.2)]' : 'text-white/40 hover:text-white'}`}
                 >
                   PESO TOTALE
                 </button>
-                <button 
+                <button
                   onClick={() => onUpdateSettings({ barbellMode: 'perSide' })}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${settings.barbellMode === 'perSide' ? 'bg-accent text-[#0c0d0e] shadow-[0_0_15px_rgba(220,252,4,0.2)]' : 'text-white/40 hover:text-white'}`}
                 >
@@ -161,19 +161,66 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
                 <span>💪</span><span>Manubri</span>
               </div>
               <div className="flex p-1 bg-white/5 rounded-xl">
-                <button 
+                <button
                   onClick={() => onUpdateSettings({ dumbbellMode: 'total' })}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${settings.dumbbellMode === 'total' || !settings.dumbbellMode ? 'bg-accent text-[#0c0d0e] shadow-[0_0_15px_rgba(220,252,4,0.2)]' : 'text-white/40 hover:text-white'}`}
                 >
                   PESO TOTALE
                 </button>
-                <button 
+                <button
                   onClick={() => onUpdateSettings({ dumbbellMode: 'perSide' })}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${settings.dumbbellMode === 'perSide' ? 'bg-accent text-[#0c0d0e] shadow-[0_0_15px_rgba(220,252,4,0.2)]' : 'text-white/40 hover:text-white'}`}
                 >
                   PESO A LATO
                 </button>
               </div>
+            </div>
+
+            {/* Plate Loaded Machine */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2 text-xs text-white/60 font-bold uppercase tracking-widest">
+                <span>💿</span><span>Macchinario con Dischi</span>
+              </div>
+              <div className="flex p-1 bg-white/5 rounded-xl">
+                <button
+                  onClick={() => onUpdateSettings({ plateLoadedMode: 'total' })}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${settings.plateLoadedMode === 'total' || !settings.plateLoadedMode ? 'bg-accent text-[#0c0d0e] shadow-[0_0_15px_rgba(220,252,4,0.2)]' : 'text-white/40 hover:text-white'}`}
+                >
+                  PESO TOTALE
+                </button>
+                <button
+                  onClick={() => onUpdateSettings({ plateLoadedMode: 'perSide' })}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${settings.plateLoadedMode === 'perSide' ? 'bg-accent text-[#0c0d0e] shadow-[0_0_15px_rgba(220,252,4,0.2)]' : 'text-white/40 hover:text-white'}`}
+                >
+                  PESO A LATO
+                </button>
+              </div>
+            </div>
+
+            {/* Default Focus Mode */}
+            <div className="space-y-3 pt-4 border-t border-white/5">
+              <label className="text-sm font-bold text-white/80 flex items-center space-x-2">
+                <ScanLine size={18} className="text-white/40" />
+                <span>Modalità Focus di Default</span>
+              </label>
+              <div className="flex p-1 bg-white/5 rounded-xl">
+                <button
+                  onClick={() => onUpdateSettings({ defaultFocusMode: true })}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${settings.defaultFocusMode ? 'bg-accent text-[#0c0d0e] shadow-[0_0_15px_rgba(220,252,4,0.2)]' : 'text-white/40 hover:text-white'}`}
+                >
+                  ATTIVA
+                </button>
+                <button
+                  onClick={() => onUpdateSettings({ defaultFocusMode: false })}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${!settings.defaultFocusMode ? 'bg-accent text-[#0c0d0e] shadow-[0_0_15px_rgba(220,252,4,0.2)]' : 'text-white/40 hover:text-white'}`}
+                >
+                  DISATTIVA
+                </button>
+              </div>
+
+              <p className="text-[10px] text-white/40 leading-relaxed">
+                Se attivo, gli allenamenti inizieranno mostrando un solo esercizio alla volta per favorire la concentrazione.
+              </p>
             </div>
           </div>
 
@@ -185,9 +232,9 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
             <FileJson size={24} className="accent-text" />
             <h3 className="font-bold">Gestione Dati</h3>
           </div>
-          
+
           <div className="space-y-3">
-            <button 
+            <button
               onClick={exportData}
               className="w-full py-3 rounded-lg bg-accent/10 border border-accent/20 text-accent hover:bg-accent/20 transition-all flex items-center justify-center space-x-2 active:scale-95 shadow-[0_0_15px_rgba(220,252,4,0.1)]"
             >
@@ -212,7 +259,7 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
           <p className="text-xs text-white/60">
             Cancellazione totale di tutti i dati memorizzati nel dispositivo.
           </p>
-          <button 
+          <button
             onClick={clearAllData}
             className="w-full py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 transition-all flex items-center justify-center space-x-2"
           >

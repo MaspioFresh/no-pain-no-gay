@@ -1,19 +1,23 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { WorkoutSession, WorkoutPlan } from '../types';
+import { WorkoutSession, WorkoutPlan, AppSettings } from '../types';
 import { ArrowLeft, TrendingUp } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface ProgressViewProps {
   sessions: WorkoutSession[];
   plans: WorkoutPlan[];
+  settings: AppSettings;
   onBack: () => void;
 }
 
-export function ProgressView({ sessions, plans, onBack }: ProgressViewProps) {
+export function ProgressView({ sessions, plans, settings, onBack }: ProgressViewProps) {
   const [selectedPlanId, setSelectedPlanId] = useState<string>(plans[0]?.id || '');
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('');
 
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
+  const exerciseType = selectedPlan?.exercises.find(e => e.id === selectedExerciseId)?.type;
+  const isCardio = exerciseType === 'cardio';
+  const isTime = exerciseType === 'time';
 
   // Initialize selected exercise if plan changes
   useEffect(() => {
@@ -36,53 +40,66 @@ export function ProgressView({ sessions, plans, onBack }: ProgressViewProps) {
 
     const data: any[] = [];
 
-    const exerciseType = selectedPlan?.exercises.find(e => e.id === selectedExerciseId)?.type;
-
     relevantSessions.forEach(session => {
       const exerciseLog = session.exercises.find(e => e.exerciseId === selectedExerciseId);
       if (exerciseLog) {
-        let metric1 = 0;
-        let metric2 = 0;
+        let maxRawWeight = 0;
+        let totalVolume = 0;
+        let totalDistance = 0;
+        let totalTime = 0;
         let validSets = 0;
+
+        const isPerSide = exerciseType === 'barbell' || !exerciseType
+          ? settings.barbellMode === 'perSide'
+          : exerciseType === 'dumbbell'
+            ? settings.dumbbellMode === 'perSide'
+            : exerciseType === 'plateLoaded'
+              ? settings.plateLoadedMode === 'perSide'
+              : false;
 
         exerciseLog.sets.forEach(set => {
           if (exerciseType === 'cardio') {
             if (set.completed || (set.distance || 0) > 0 || (set.timeSeconds || 0) > 0) {
-               metric1 += set.distance || 0; // Total Distance
-               metric2 += set.timeSeconds || 0; // Total Time
+               totalDistance += set.distance || 0;
+               totalTime += set.timeSeconds || 0;
                validSets++;
             }
           } else if (exerciseType === 'time') {
             if (set.completed || (set.timeSeconds || 0) > 0) {
-               metric1 = Math.max(metric1, set.weight || 0); // Max Added Weight
-               metric2 += set.timeSeconds || 0; // Total Time
+               maxRawWeight = Math.max(maxRawWeight, set.weight || 0);
+               totalTime += set.timeSeconds || 0;
                validSets++;
             }
           } else {
             if (set.completed || ((set.weight || 0) > 0 && (set.reps || 0) > 0)) {
-               metric1 = Math.max(metric1, set.weight || 0); // Max Weight
-               metric2 += (set.weight || 0) * (set.reps || 0); // Total Volume
+               maxRawWeight = Math.max(maxRawWeight, set.weight || 0);
+               totalVolume += (set.weight || 0) * (set.reps || 0);
                validSets++;
             }
           }
         });
 
         if (validSets > 0) {
+          let metric1Value = maxRawWeight;
+          if (isPerSide && !isCardio) {
+            if (exerciseType === 'barbell' || exerciseType === 'plateLoaded') {
+              metric1Value = (maxRawWeight - (exerciseLog.barbellWeightUsed || 0)) / 2;
+            } else {
+              metric1Value = maxRawWeight / 2;
+            }
+          }
+
           data.push({
             date: new Date(session.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-            metric1,
-            metric2
+            metric1: isCardio ? totalDistance : metric1Value,
+            metric2: (isCardio || isTime) ? totalTime : totalVolume
           });
         }
       }
     });
 
     return data;
-  }, [sessions, selectedPlanId, selectedExerciseId]);
-
-  const exerciseType = selectedPlan?.exercises.find(e => e.id === selectedExerciseId)?.type;
-  const isCardio = exerciseType === 'cardio';
-  const isTime = exerciseType === 'time';
+  }, [sessions, selectedPlanId, selectedExerciseId, settings, exerciseType, isCardio, isTime]);
   
   const metric1Title = isCardio ? 'Distanza Totale' : 'Peso Massimo';
   const metric1Desc = isCardio ? 'Distanza percorsa cumulativa' : 'Miglioramento del carico massimo sollevato/usato';

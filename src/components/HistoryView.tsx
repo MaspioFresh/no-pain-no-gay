@@ -1,11 +1,11 @@
-import React from 'react';
-import { WorkoutSession, WorkoutPlan } from '../types';
-import { ArrowLeft, Calendar, Dumbbell, Trash2, Edit2 } from 'lucide-react';
+import { WorkoutSession, WorkoutPlan, AppSettings } from '../types';
+import { ArrowLeft, Calendar, Dumbbell, Trash2, Edit2, Scale } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface HistoryViewProps {
   sessions: WorkoutSession[];
   plans: WorkoutPlan[];
+  settings: AppSettings;
   onBack: () => void;
   onDeleteSession: (id: string) => void;
   onEditSession: (session: WorkoutSession) => void;
@@ -26,7 +26,7 @@ const formatTimeSeconds = (totalSeconds: number, isCardio: boolean) => {
   }
 };
 
-export function HistoryView({ sessions, plans, onBack, onDeleteSession, onEditSession }: HistoryViewProps) {
+export function HistoryView({ sessions, plans, settings, onBack, onDeleteSession, onEditSession }: HistoryViewProps) {
   const getPlanName = (planId: string) => plans.find(p => p.id === planId)?.name || 'Scheda Eliminata';
 
   const formatDate = (isoString: string) => {
@@ -108,15 +108,31 @@ export function HistoryView({ sessions, plans, onBack, onDeleteSession, onEditSe
                           )}
                         </div>
                         <div className="flex space-x-2 font-mono text-[10px] flex-wrap justify-end gap-y-1">
-                          {(ex.sets || []).map((s, si) => (
-                            <span key={si} className="bg-white/5 px-1 rounded">
-                              {planEx?.type === 'cardio'
-                                ? `${formatTimeSeconds(s.timeSeconds || 0, true)} - ${s.distance || 0}${s.unit}`
-                                : planEx?.type === 'time'
-                                ? `${formatTimeSeconds(s.timeSeconds || 0, false)} + ${s.weight || 0}${s.unit}`
-                                : `${s.weight}${s.unit || session.unitAtTime || 'kg'}×${s.reps}`}
-                            </span>
-                          ))}
+                          {(ex.sets || []).map((s, si) => {
+                            const isPerSide = planEx?.type === 'barbell' || !planEx?.type
+                              ? settings.barbellMode === 'perSide'
+                              : planEx?.type === 'dumbbell'
+                                ? settings.dumbbellMode === 'perSide'
+                                : planEx?.type === 'plateLoaded'
+                                  ? settings.plateLoadedMode === 'perSide'
+                                  : false;
+                            
+                            const displayWeight = isPerSide
+                              ? (planEx?.type === 'barbell' || planEx?.type === 'plateLoaded')
+                                ? ((s.weight || 0) - (ex.barbellWeightUsed || 0)) / 2
+                                : (s.weight || 0) / 2
+                              : (s.weight || 0);
+
+                            return (
+                              <span key={si} className="bg-white/5 px-1 rounded">
+                                {planEx?.type === 'cardio'
+                                  ? `${formatTimeSeconds(s.timeSeconds || 0, true)} - ${s.distance || 0}${s.unit}`
+                                  : planEx?.type === 'time'
+                                  ? `${formatTimeSeconds(s.timeSeconds || 0, false)} + ${s.weight || 0}${s.unit}`
+                                  : `${displayWeight}${s.unit || session.unitAtTime || 'kg'}×${s.reps}`}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
                       {ex.notes && (
