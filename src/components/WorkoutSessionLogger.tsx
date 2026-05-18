@@ -290,6 +290,92 @@ export function WorkoutSessionLogger({
     setExerciseSessions(newSessions);
   };
 
+  const updateSubSet = (exerciseIndex: number, setIndex: number, subSetIndex: number, field: 'reps' | 'weight' | 'completed', value: any) => {
+    const newSessions = [...exerciseSessions];
+    const set = newSessions[exerciseIndex]?.sets[setIndex];
+    if (set && set.subSets && set.subSets[subSetIndex]) {
+      const updatedSubSets = [...set.subSets];
+      updatedSubSets[subSetIndex] = {
+        ...updatedSubSets[subSetIndex],
+        [field]: value
+      };
+      set.subSets = updatedSubSets;
+    }
+    setExerciseSessions(newSessions);
+  };
+
+  const triggerRestTimer = (seconds: number) => {
+    setCurrentRestSeconds(seconds);
+    setRestTimerActive(false);
+    setIsRestTimerMinimized(false);
+    setTimeout(() => setRestTimerActive(true), 10);
+  };
+
+  const handleSetCheckToggle = (exIdx: number, setIdx: number) => {
+    const newSessions = [...exerciseSessions];
+    const set = newSessions[exIdx]?.sets[setIdx];
+    if (!set) return;
+
+    const targetState = !set.completed;
+    set.completed = targetState;
+    setExerciseSessions(newSessions);
+
+    if (targetState) {
+      const group = groupedExercises.find(g => g.items.some((i: any) => i.exIdx === exIdx));
+      if (group) {
+        const allCompleted = group.items.every((item: any) => newSessions[item.exIdx]?.sets[setIdx]?.completed);
+        if (allCompleted) {
+          let timerTriggered = false;
+          for (const item of group.items) {
+            const s = newSessions[item.exIdx]?.sets[setIdx];
+            if (s && s.setMode && s.setMode !== 'normal') {
+              if (s.setMode === 'restPause') {
+                triggerRestTimer(s.restPauseSeconds || 20);
+                timerTriggered = true;
+                break;
+              } else if (s.setMode === 'dropSet') {
+                setRestTimerActive(false);
+                timerTriggered = true;
+                break;
+              }
+            }
+          }
+          if (!timerTriggered) {
+            const maxRest = Math.max(...group.items.map((i: any) => plan.exercises[i.exIdx]?.restSeconds || 60));
+            triggerRestTimer(maxRest);
+          }
+        }
+      }
+    }
+  };
+
+  const handleSubSetCheckToggle = (exIdx: number, setIdx: number, subIdx: number) => {
+    const newSessions = [...exerciseSessions];
+    const set = newSessions[exIdx]?.sets[setIdx];
+    if (!set || !set.subSets || !set.subSets[subIdx]) return;
+
+    const targetState = !set.subSets[subIdx].completed;
+    set.subSets[subIdx].completed = targetState;
+    setExerciseSessions(newSessions);
+
+    if (targetState) {
+      const isLastSub = subIdx === set.subSets.length - 1;
+      if (isLastSub) {
+        const group = groupedExercises.find(g => g.items.some((i: any) => i.exIdx === exIdx));
+        const maxRest = group 
+          ? Math.max(...group.items.map((i: any) => plan.exercises[i.exIdx]?.restSeconds || 60))
+          : (plan.exercises[exIdx]?.restSeconds || 60);
+        triggerRestTimer(maxRest);
+      } else {
+        if (set.setMode === 'restPause') {
+          triggerRestTimer(set.restPauseSeconds || 20);
+        } else {
+          setRestTimerActive(false);
+        }
+      }
+    }
+  };
+
 
   const groupedExercises = React.useMemo(() => {
     const groups: any[] = [];
@@ -546,7 +632,7 @@ export function WorkoutSessionLogger({
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
-                                className={`flex items-stretch space-x-2 transition-opacity duration-300 ${isSetCompleted ? 'opacity-30' : ''} ${group.isSuperset && setIdx < maxSets - 1 ? 'border-b border-white/5 pb-4' : ''}`}
+                                className={`flex items-stretch space-x-2 transition-opacity duration-300 ${group.isSuperset && setIdx < maxSets - 1 ? 'border-b border-white/5 pb-4' : ''}`}
                               >
                                 <div className="w-8 flex-shrink-0 flex items-start justify-center mt-3">
                                   <div className="w-6 h-6 rounded bg-white/5 flex items-center justify-center font-mono text-[10px] text-white/40">
@@ -600,7 +686,7 @@ export function WorkoutSessionLogger({
                                             <><div className="w-1/2">{isPerSide ? 'P.LATO' : 'PESO'}</div><div className="w-8 text-center mx-1">UNT</div><div className="w-1/2 flex items-center justify-center space-x-1"><span>REPS</span>{targetSet?.isMaxReps && <span className="text-[6px] font-black px-1 py-0.5 rounded bg-accent text-[#0c0d0e] uppercase tracking-wider flex-shrink-0">MAX</span>}</div></>
                                           )}
                                         </div>
-                                        <div className="flex w-full space-x-1 items-start">
+                                        <div className={`flex w-full space-x-1 items-start transition-opacity duration-300 ${set.completed ? 'opacity-30' : ''}`}>
                                           <div className={exercise.type === 'cardio' || exercise.type === 'time' ? 'w-20' : 'w-1/2'}>
                                             <div className="flex flex-col space-y-1">
                                               {exercise.type === 'cardio' ? (
@@ -728,23 +814,106 @@ export function WorkoutSessionLogger({
                                               />
                                             )}
                                           </div>
+
+                                          <div className="w-10 flex-shrink-0 pt-1">
+                                            <button
+                                              onClick={() => handleSetCheckToggle(exIdx, setIdx)}
+                                              className={`w-full py-2 flex items-center justify-center rounded-lg transition-all border ${set.completed
+                                                ? 'bg-transparent border-accent text-accent shadow-[0_0_10px_rgba(220,252,4,0.3)]'
+                                                : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
+                                                }`}
+                                            >
+                                              <Check size={14} className={set.completed ? 'stroke-[3]' : ''} />
+                                            </button>
+                                          </div>
                                         </div>
+
+                                        {/* Subsets container with beautiful left vertical connection line */}
+                                        {set.subSets && set.subSets.length > 0 && (
+                                          <div className="border-l border-dashed border-accent/20 pl-4 ml-3 space-y-2 mt-2">
+                                            {set.subSets.map((sub, subIdx) => {
+                                              const isSubCompleted = sub.completed;
+                                              const rawSubWeight = sub.weight || 0;
+                                              const subWeightDisplayVal: number | string = isPerSide
+                                                ? (!exercise.type || exercise.type === 'barbell')
+                                                  ? (rawSubWeight > barbell ? (rawSubWeight - barbell) / 2 : '')
+                                                  : (rawSubWeight > 0 ? rawSubWeight / 2 : '')
+                                                : (rawSubWeight || '');
+                                              const subWeightPlaceholder = isPerSide && rawWeight
+                                                ? String((!exercise.type || exercise.type === 'barbell') ? (rawWeight > barbell ? (rawWeight - barbell) / 2 : 0) : rawWeight / 2)
+                                                : (rawWeight ? String(rawWeight) : '0');
+
+                                              return (
+                                                <div key={subIdx} className={`flex flex-col space-y-1 transition-opacity duration-300 ${isSubCompleted ? 'opacity-30' : ''}`}>
+                                                  <div className="flex w-full text-[7px] mono-label text-white/40 uppercase items-center pl-1">
+                                                    <div className="w-1/2 flex items-center space-x-1">
+                                                      {set.setMode === 'dropSet' ? (
+                                                        <span className="text-[6px] font-black px-1.5 py-0.5 rounded bg-purple-950/40 text-purple-400 border border-purple-800/40 uppercase tracking-wider">
+                                                          Drop {subIdx + 1}
+                                                        </span>
+                                                      ) : (
+                                                        <span className="text-[6px] font-black px-1.5 py-0.5 rounded bg-orange-950/40 text-orange-400 border border-orange-800/40 uppercase tracking-wider">
+                                                          Rest-Pause {subIdx + 1}
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                    <div className="w-8 text-center mx-1">UNT</div>
+                                                    <div className="w-1/2">REPS</div>
+                                                  </div>
+                                                  <div className="flex w-full space-x-1 items-start">
+                                                    {/* Weight Input */}
+                                                    <div className="w-1/2">
+                                                      <input
+                                                        type="number"
+                                                        value={subWeightDisplayVal}
+                                                        onChange={(e) => {
+                                                          const n = parseFloat(e.target.value) || 0;
+                                                          if (isPerSide) {
+                                                            const total = (!exercise.type || exercise.type === 'barbell') ? (n * 2) + barbell : n * 2;
+                                                            updateSubSet(exIdx, setIdx, subIdx, 'weight', total);
+                                                          } else {
+                                                            updateSubSet(exIdx, setIdx, subIdx, 'weight', n);
+                                                          }
+                                                        }}
+                                                        placeholder={subWeightPlaceholder}
+                                                        className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                                      />
+                                                    </div>
+                                                    {/* Unit Label */}
+                                                    <div className="w-8 flex items-center justify-center pt-1 text-[8px] font-mono text-white/30 uppercase">
+                                                      {set.unit || 'kg'}
+                                                    </div>
+                                                    {/* Reps Input */}
+                                                    <div className="w-1/2">
+                                                      <input
+                                                        type="number"
+                                                        value={sub.reps || ''}
+                                                        onChange={(e) => updateSubSet(exIdx, setIdx, subIdx, 'reps', parseInt(e.target.value))}
+                                                        placeholder="0"
+                                                        className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                                      />
+                                                    </div>
+                                                    {/* Check Button */}
+                                                    <div className="w-10 flex-shrink-0 pt-1">
+                                                      <button
+                                                        onClick={() => handleSubSetCheckToggle(exIdx, setIdx, subIdx)}
+                                                        className={`w-full py-2 flex items-center justify-center rounded-lg transition-all border ${isSubCompleted
+                                                          ? 'bg-transparent border-accent text-accent shadow-[0_0_10px_rgba(220,252,4,0.3)]'
+                                                          : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
+                                                          }`}
+                                                      >
+                                                        <Check size={14} className={isSubCompleted ? 'stroke-[3]' : ''} />
+                                                      </button>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   })}
-                                </div>
-
-                                <div className="w-10 flex-shrink-0 flex items-stretch py-1">
-                                  <button
-                                    onClick={() => toggleSupersetComplete(group.items.map((i: any) => i.exIdx), setIdx)}
-                                    className={`w-full flex flex-col items-center justify-center rounded-xl transition-all border ${isSetCompleted
-                                      ? 'bg-transparent border-accent text-accent shadow-[0_0_15px_rgba(220,252,4,0.4)]'
-                                      : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
-                                      }`}
-                                  >
-                                    <Check size={18} className={isSetCompleted ? 'stroke-[3]' : ''} />
-                                    {group.isSuperset && <span className="text-[7px] font-bold mt-1 leading-none uppercase tracking-widest">ALL</span>}
-                                  </button>
                                 </div>
                               </motion.div>
                             );
@@ -881,7 +1050,7 @@ export function WorkoutSessionLogger({
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className={`flex items-stretch space-x-2 transition-opacity duration-300 ${isSetCompleted ? 'opacity-30' : ''} ${group.isSuperset && setIdx < maxSets - 1 ? 'border-b border-white/5 pb-4' : ''}`}
+                        className={`flex items-stretch space-x-2 transition-opacity duration-300 ${group.isSuperset && setIdx < maxSets - 1 ? 'border-b border-white/5 pb-4' : ''}`}
                       >
                         <div className="w-8 flex-shrink-0 flex items-start justify-center mt-3">
                           <div className="w-6 h-6 rounded bg-white/5 flex items-center justify-center font-mono text-[10px] text-white/40">
@@ -945,7 +1114,7 @@ export function WorkoutSessionLogger({
                                     <><div className="w-1/2">{isPerSide ? 'P.LATO' : 'PESO'}</div><div className="w-8 text-center mx-1">UNT</div><div className="w-1/2 flex items-center justify-center space-x-1"><span>REPS</span>{targetSet?.isMaxReps && <span className="text-[6px] font-black px-1 py-0.5 rounded bg-accent text-[#0c0d0e] uppercase tracking-wider flex-shrink-0">MAX</span>}</div></>
                                   )}
                                 </div>
-                                <div className="flex w-full space-x-1 items-start">
+                                <div className={`flex w-full space-x-1 items-start transition-opacity duration-300 ${set.completed ? 'opacity-30' : ''}`}>
                                   {/* Left Input */}
                                   <div className={exercise.type === 'cardio' || exercise.type === 'time' ? 'w-20' : 'w-1/2'}>
                                     <div className="flex flex-col space-y-1">
@@ -1068,23 +1237,106 @@ export function WorkoutSessionLogger({
                                       />
                                     )}
                                   </div>
+
+                                  <div className="w-10 flex-shrink-0 pt-1">
+                                    <button
+                                      onClick={() => handleSetCheckToggle(exIdx, setIdx)}
+                                      className={`w-full py-2 flex items-center justify-center rounded-lg transition-all border ${set.completed
+                                        ? 'bg-transparent border-accent text-accent shadow-[0_0_10px_rgba(220,252,4,0.3)]'
+                                        : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
+                                        }`}
+                                    >
+                                      <Check size={14} className={set.completed ? 'stroke-[3]' : ''} />
+                                    </button>
+                                  </div>
                                 </div>
+
+                                {/* Subsets container with beautiful left vertical connection line */}
+                                {set.subSets && set.subSets.length > 0 && (
+                                  <div className="border-l border-dashed border-accent/20 pl-4 ml-3 space-y-2 mt-2">
+                                    {set.subSets.map((sub, subIdx) => {
+                                      const isSubCompleted = sub.completed;
+                                      const rawSubWeight = sub.weight || 0;
+                                      const subWeightDisplayVal: number | string = isPerSide
+                                        ? (!exercise.type || exercise.type === 'barbell')
+                                          ? (rawSubWeight > barbell ? (rawSubWeight - barbell) / 2 : '')
+                                          : (rawSubWeight > 0 ? rawSubWeight / 2 : '')
+                                        : (rawSubWeight || '');
+                                      const subWeightPlaceholder = isPerSide && rawWeight
+                                        ? String((!exercise.type || exercise.type === 'barbell') ? (rawWeight > barbell ? (rawWeight - barbell) / 2 : 0) : rawWeight / 2)
+                                        : (rawWeight ? String(rawWeight) : '0');
+
+                                      return (
+                                        <div key={subIdx} className={`flex flex-col space-y-1 transition-opacity duration-300 ${isSubCompleted ? 'opacity-30' : ''}`}>
+                                          <div className="flex w-full text-[7px] mono-label text-white/40 uppercase items-center pl-1">
+                                            <div className="w-1/2 flex items-center space-x-1">
+                                              {set.setMode === 'dropSet' ? (
+                                                <span className="text-[6px] font-black px-1.5 py-0.5 rounded bg-purple-950/40 text-purple-400 border border-purple-800/40 uppercase tracking-wider">
+                                                  Drop {subIdx + 1}
+                                                </span>
+                                              ) : (
+                                                <span className="text-[6px] font-black px-1.5 py-0.5 rounded bg-orange-950/40 text-orange-400 border border-orange-800/40 uppercase tracking-wider">
+                                                  Rest-Pause {subIdx + 1}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="w-8 text-center mx-1">UNT</div>
+                                            <div className="w-1/2">REPS</div>
+                                          </div>
+                                          <div className="flex w-full space-x-1 items-start">
+                                            {/* Weight Input */}
+                                            <div className="w-1/2">
+                                              <input
+                                                type="number"
+                                                value={subWeightDisplayVal}
+                                                onChange={(e) => {
+                                                  const n = parseFloat(e.target.value) || 0;
+                                                  if (isPerSide) {
+                                                    const total = (!exercise.type || exercise.type === 'barbell') ? (n * 2) + barbell : n * 2;
+                                                    updateSubSet(exIdx, setIdx, subIdx, 'weight', total);
+                                                  } else {
+                                                    updateSubSet(exIdx, setIdx, subIdx, 'weight', n);
+                                                  }
+                                                }}
+                                                placeholder={subWeightPlaceholder}
+                                                className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                              />
+                                            </div>
+                                            {/* Unit Label */}
+                                            <div className="w-8 flex items-center justify-center pt-1 text-[8px] font-mono text-white/30 uppercase">
+                                              {set.unit || 'kg'}
+                                            </div>
+                                            {/* Reps Input */}
+                                            <div className="w-1/2">
+                                              <input
+                                                type="number"
+                                                value={sub.reps || ''}
+                                                onChange={(e) => updateSubSet(exIdx, setIdx, subIdx, 'reps', parseInt(e.target.value))}
+                                                placeholder="0"
+                                                className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                              />
+                                            </div>
+                                            {/* Check Button */}
+                                            <div className="w-10 flex-shrink-0 pt-1">
+                                              <button
+                                                onClick={() => handleSubSetCheckToggle(exIdx, setIdx, subIdx)}
+                                                className={`w-full py-2 flex items-center justify-center rounded-lg transition-all border ${isSubCompleted
+                                                  ? 'bg-transparent border-accent text-accent shadow-[0_0_10px_rgba(220,252,4,0.3)]'
+                                                  : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
+                                                  }`}
+                                              >
+                                                <Check size={14} className={isSubCompleted ? 'stroke-[3]' : ''} />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
-                        </div>
-
-                        <div className="w-10 flex-shrink-0 flex items-stretch py-1">
-                          <button
-                            onClick={() => toggleSupersetComplete(group.items.map((i: any) => i.exIdx), setIdx)}
-                            className={`w-full flex flex-col items-center justify-center rounded-xl transition-all border ${isSetCompleted
-                              ? 'bg-transparent border-accent text-accent shadow-[0_0_15px_rgba(220,252,4,0.4)]'
-                              : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
-                              }`}
-                          >
-                            <Check size={18} className={isSetCompleted ? 'stroke-[3]' : ''} />
-                            {group.isSuperset && <span className="text-[7px] font-bold mt-1 leading-none uppercase tracking-widest">ALL</span>}
-                          </button>
                         </div>
                       </motion.div>
                     );
