@@ -1,11 +1,15 @@
 export type WeightUnit = 'kg' | 'lb' | 'km' | 'm';
-export type ExerciseType = 'barbell' | 'dumbbell' | 'machine' | 'plateLoaded' | 'time' | 'cardio';
+export type ExerciseType = 'barbell' | 'dumbbell' | 'machine' | 'plateLoaded' | 'time' | 'cardio' | 'bodyweight';
 
 export interface PlanSet {
   reps?: number;
   weight?: number;
   timeSeconds?: number;
   distance?: number;
+  isMaxReps?: boolean;
+  setMode?: 'normal' | 'restPause' | 'dropSet';
+  subSetsCount?: number;
+  restPauseSeconds?: number;
 }
 
 export interface Exercise {
@@ -25,6 +29,7 @@ export interface WorkoutPlan {
   name: string;
   description?: string;
   exercises: Exercise[];
+  isArchived?: boolean; // Archives the plan so it is hidden in dashboard
 }
 
 export interface SetEntry {
@@ -34,6 +39,10 @@ export interface SetEntry {
   distance?: number;
   unit: WeightUnit;
   completed: boolean;
+  setMode?: 'normal' | 'restPause' | 'dropSet';
+  subSetsCount?: number;
+  subSets?: Array<{ reps: number; weight: number; completed: boolean; isMaxReps?: boolean }>;
+  restPauseSeconds?: number;
 }
 
 export interface ExerciseSession {

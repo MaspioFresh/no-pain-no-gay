@@ -101,11 +101,11 @@ export function ProgressView({ sessions, plans, settings, onBack }: ProgressView
     return data;
   }, [sessions, selectedPlanId, selectedExerciseId, settings, exerciseType, isCardio, isTime]);
   
-  const metric1Title = isCardio ? 'Distanza Totale' : 'Peso Massimo';
-  const metric1Desc = isCardio ? 'Distanza percorsa cumulativa' : 'Miglioramento del carico massimo sollevato/usato';
+  const metric1Title = isCardio ? 'Distanza Totale' : (exerciseType === 'bodyweight' ? 'Sovraccarico Massimo' : 'Peso Massimo');
+  const metric1Desc = isCardio ? 'Distanza percorsa cumulativa' : (exerciseType === 'bodyweight' ? 'Miglioramento del sovraccarico massimo usato' : 'Miglioramento del carico massimo sollevato/usato');
   
-  const metric2Title = (isCardio || isTime) ? 'Tempo Totale' : 'Volume Totale';
-  const metric2Desc = (isCardio || isTime) ? 'Minuti/Secondi cumulativi' : 'Carico totale (Serie × Ripetizioni × Peso)';
+  const metric2Title = (isCardio || isTime) ? 'Tempo Totale' : (exerciseType === 'bodyweight' ? 'Volume Sovraccarico' : 'Volume Totale');
+  const metric2Desc = (isCardio || isTime) ? 'Minuti/Secondi cumulativi' : (exerciseType === 'bodyweight' ? 'Sovraccarico totale (Serie × Ripetizioni × Sovr.)' : 'Carico totale (Serie × Ripetizioni × Peso)');
 
   return (
     <div className="flex flex-col space-y-6 pb-24 animate-in fade-in duration-300">

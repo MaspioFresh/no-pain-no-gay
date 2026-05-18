@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { WorkoutPlan, Exercise, PlanSet, ExerciseType } from '../types';
+import { WorkoutPlan, Exercise, PlanSet, ExerciseType, AppSettings } from '../types';
 import { ArrowLeft, Save, Plus, Trash2, ArrowUp, ArrowDown, Minus, Link2, Unlink } from 'lucide-react';
 import { motion, Reorder } from 'motion/react';
 import { Modal, useModal } from './Modal';
@@ -15,9 +15,10 @@ interface PlanEditorProps {
   onSave: (plan: WorkoutPlan) => void;
   onCancel: () => void;
   existingPlan?: WorkoutPlan;
+  settings: AppSettings;
 }
 
-export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) {
+export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEditorProps) {
   const [name, setName] = useState(existingPlan?.name || '');
   const [exercises, setExercises] = useState<Exercise[]>(existingPlan?.exercises || [
     { id: generateId(), name: '', targetSets: [{ reps: 0 }] }
@@ -25,7 +26,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
   const { modalState, closeModal, showAlert } = useModal();
 
   const addExercise = () => {
-    setExercises([...exercises, {
+    setExercises(prev => [...prev, {
       id: generateId(),
       name: '',
       type: 'barbell',
@@ -37,47 +38,52 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
 
   const moveExercise = (index: number, direction: 'up' | 'down') => {
     if (direction === 'up' && index > 0) {
-      const newExercises = [...exercises];
-      const temp = newExercises[index];
-      newExercises[index] = newExercises[index - 1];
-      newExercises[index - 1] = temp;
-      setExercises(newExercises);
+      setExercises(prev => {
+        const newExercises = [...prev];
+        const temp = newExercises[index];
+        newExercises[index] = newExercises[index - 1];
+        newExercises[index - 1] = temp;
+        return newExercises;
+      });
     } else if (direction === 'down' && index < exercises.length - 1) {
-      const newExercises = [...exercises];
-      const temp = newExercises[index];
-      newExercises[index] = newExercises[index + 1];
-      newExercises[index + 1] = temp;
-      setExercises(newExercises);
+      setExercises(prev => {
+        const newExercises = [...prev];
+        const temp = newExercises[index];
+        newExercises[index] = newExercises[index + 1];
+        newExercises[index + 1] = temp;
+        return newExercises;
+      });
     }
   };
 
   const toggleSuperset = (index: number) => {
     if (index === 0) return;
-    const currentEx = exercises[index];
-    const prevEx = exercises[index - 1];
+    setExercises(prev => {
+      const currentEx = prev[index];
+      const prevEx = prev[index - 1];
+      let newExercises = [...prev];
 
-    let newExercises = [...exercises];
-
-    if (currentEx.supersetId && currentEx.supersetId === prevEx.supersetId) {
-      newExercises[index] = { ...currentEx, supersetId: undefined };
-    } else {
-      const sId = prevEx.supersetId || generateId();
-      newExercises[index - 1] = { ...prevEx, supersetId: sId };
-      newExercises[index] = { ...currentEx, supersetId: sId };
-    }
-    setExercises(newExercises);
+      if (currentEx.supersetId && currentEx.supersetId === prevEx.supersetId) {
+        newExercises[index] = { ...currentEx, supersetId: undefined };
+      } else {
+        const sId = prevEx.supersetId || generateId();
+        newExercises[index - 1] = { ...prevEx, supersetId: sId };
+        newExercises[index] = { ...currentEx, supersetId: sId };
+      }
+      return newExercises;
+    });
   };
 
   const removeExercise = (id: string) => {
-    setExercises(exercises.filter(ex => ex.id !== id));
+    setExercises(prev => prev.filter(ex => ex.id !== id));
   };
 
   const updateExercise = (id: string, updates: Partial<Exercise>) => {
-    setExercises(exercises.map(ex => ex.id === id ? { ...ex, ...updates } : ex));
+    setExercises(prev => prev.map(ex => ex.id === id ? { ...ex, ...updates } : ex));
   };
 
   const addTargetSet = (exId: string) => {
-    setExercises(exercises.map(ex => {
+    setExercises(prev => prev.map(ex => {
       if (ex.id === exId) {
         const lastSet = ex.targetSets[ex.targetSets.length - 1];
         return {
@@ -95,7 +101,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
   };
 
   const removeTargetSet = (exId: string, index: number) => {
-    setExercises(exercises.map(ex => {
+    setExercises(prev => prev.map(ex => {
       if (ex.id === exId) {
         const newSets = [...ex.targetSets];
         newSets.splice(index, 1);
@@ -107,7 +113,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
   };
 
   const updateTargetSet = (exId: string, index: number, field: keyof PlanSet, value: any) => {
-    setExercises(exercises.map(ex => {
+    setExercises(prev => prev.map(ex => {
       if (ex.id === exId) {
         const newSets = [...ex.targetSets];
         newSets[index] = { ...newSets[index], [field]: value };
@@ -246,6 +252,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                           <option value="dumbbell" className="bg-[#151619]">Manubri</option>
                           <option value="plateLoaded" className="bg-[#151619]">Macchinario con Dischi</option>
                           <option value="machine" className="bg-[#151619]">Macchinario con pacco pesi</option>
+                          <option value="bodyweight" className="bg-[#151619]">Corpo Libero</option>
                           <option value="time" className="bg-[#151619]">A Tempo</option>
                           <option value="cardio" className="bg-[#151619]">Cardio</option>
                         </select>
@@ -291,124 +298,277 @@ export function PlanEditor({ onSave, onCancel, existingPlan }: PlanEditorProps) 
                       </div>
 
                       <div className="space-y-2">
-                        {exercise.targetSets.map((set, sIdx) => (
-                          <div key={sIdx} className="flex items-center space-x-2 bg-white/5 p-2 rounded-lg">
-                            <span className="text-[10px] font-mono w-4 text-white/40">{sIdx + 1}</span>
-                            <div className="flex-1 flex items-center space-x-2">
-                              {(!exercise.type || ['barbell', 'dumbbell', 'machine', 'plateLoaded'].includes(exercise.type)) && (
-                                <>
-                                  <input
-                                    type="number"
-                                    value={set.reps || ''}
-                                    onChange={(e) => updateTargetSet(exercise.id, sIdx, 'reps', parseInt(e.target.value))}
-                                    placeholder="Rip"
-                                    className="input-number-small"
-                                  />
-                                  <input
-                                    type="number"
-                                    value={set.weight || ''}
-                                    onChange={(e) => updateTargetSet(exercise.id, sIdx, 'weight', parseFloat(e.target.value))}
-                                    placeholder="Peso"
-                                    className="input-number-small"
-                                  />
-                                </>
-                              )}
-                              {exercise.type === 'time' && (
-                                <>
-                                  <div className="flex w-full space-x-1">
-                                    <input
-                                      type="number"
-                                      value={Math.floor((set.timeSeconds || 0) / 60) || ''}
-                                      onChange={(e) => {
-                                        const m = parseInt(e.target.value) || 0;
-                                        const s = (set.timeSeconds || 0) % 60;
-                                        updateTargetSet(exercise.id, sIdx, 'timeSeconds', m * 60 + s);
+                        {exercise.targetSets.map((set, sIdx) => {
+                          const barbell = exercise.barbellWeight || 20;
+                          const isPerSide = exercise.type === 'barbell' || !exercise.type
+                            ? settings.barbellMode === 'perSide'
+                            : exercise.type === 'dumbbell'
+                              ? settings.dumbbellMode === 'perSide'
+                              : exercise.type === 'plateLoaded'
+                                ? settings.plateLoadedMode === 'perSide'
+                                : false;
+
+                          const rawWeight = set.weight || 0;
+                          const weightDisplayVal = isPerSide
+                            ? (exercise.type === 'barbell' || !exercise.type)
+                              ? (rawWeight > barbell ? (rawWeight - barbell) / 2 : '')
+                              : (rawWeight > 0 ? rawWeight / 2 : '')
+                            : (rawWeight || '');
+
+                          return (
+                            <div key={sIdx} className="flex flex-col space-y-2 bg-white/5 p-2 rounded-lg">
+                              {/* Main Row: Index + Inputs + Delete Button */}
+                              <div className="flex items-center space-x-2 w-full">
+                                <span className="text-[10px] font-mono w-4 text-white/40 text-center flex-shrink-0">{sIdx + 1}</span>
+                                <div className="flex-1 flex items-center space-x-2 min-w-0">
+                                  {(!exercise.type || ['barbell', 'dumbbell', 'machine', 'plateLoaded', 'bodyweight'].includes(exercise.type)) && (
+                                    <>
+                                      <input
+                                        type="number"
+                                        value={weightDisplayVal}
+                                        onChange={(e) => {
+                                          const valPerLato = parseFloat(e.target.value) || 0;
+                                          if (isPerSide) {
+                                            const totale = (exercise.type === 'barbell' || !exercise.type)
+                                              ? (valPerLato * 2) + barbell
+                                              : valPerLato * 2;
+                                            updateTargetSet(exercise.id, sIdx, 'weight', totale);
+                                          } else {
+                                            updateTargetSet(exercise.id, sIdx, 'weight', valPerLato);
+                                          }
+                                        }}
+                                        placeholder={isPerSide ? 'P.Lato' : (exercise.type === 'bodyweight' ? 'Sovr.' : 'Peso')}
+                                        className="input-number-small flex-1 min-w-[50px]"
+                                      />
+                                      <div className="flex items-center space-x-1 flex-shrink-0">
+                                        {!set.isMaxReps && (
+                                          <input
+                                            type="number"
+                                            value={set.reps || ''}
+                                            onChange={(e) => updateTargetSet(exercise.id, sIdx, 'reps', parseInt(e.target.value))}
+                                            placeholder="Rip"
+                                            className="input-number-small w-14"
+                                          />
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const nextVal = !set.isMaxReps;
+                                            updateTargetSet(exercise.id, sIdx, 'isMaxReps', nextVal);
+                                            if (nextVal) {
+                                              updateTargetSet(exercise.id, sIdx, 'reps', 0);
+                                            }
+                                          }}
+                                          className={`text-[8px] font-black px-1.5 py-1 rounded transition-all uppercase border ${set.isMaxReps
+                                            ? 'border-accent bg-accent text-[#0c0d0e] font-bold shadow-[0_0_8px_rgba(220,252,4,0.4)]'
+                                            : 'border-white/10 text-white/40 hover:border-white/20 hover:text-white'
+                                            }`}
+                                        >
+                                          MAX
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                  {exercise.type === 'time' && (
+                                    <>
+                                      <div className="flex w-full space-x-1">
+                                        <input
+                                          type="number"
+                                          value={Math.floor((set.timeSeconds || 0) / 60) || ''}
+                                          onChange={(e) => {
+                                            const m = parseInt(e.target.value) || 0;
+                                            const s = (set.timeSeconds || 0) % 60;
+                                            updateTargetSet(exercise.id, sIdx, 'timeSeconds', m * 60 + s);
+                                          }}
+                                          placeholder="min"
+                                          className="input-number-small px-1"
+                                        />
+                                        <span className="text-white/30 self-center">:</span>
+                                        <input
+                                          type="number"
+                                          value={(set.timeSeconds || 0) % 60 || ''}
+                                          onChange={(e) => {
+                                            const s = parseInt(e.target.value) || 0;
+                                            const m = Math.floor((set.timeSeconds || 0) / 60);
+                                            updateTargetSet(exercise.id, sIdx, 'timeSeconds', m * 60 + s);
+                                          }}
+                                          placeholder="sec"
+                                          className="input-number-small px-1"
+                                        />
+                                      </div>
+                                      <input
+                                        type="number"
+                                        value={set.weight || ''}
+                                        onChange={(e) => updateTargetSet(exercise.id, sIdx, 'weight', parseFloat(e.target.value))}
+                                        placeholder="+Kg"
+                                        className="input-number-small"
+                                      />
+                                    </>
+                                  )}
+                                  {exercise.type === 'cardio' && (
+                                    <>
+                                      <div className="flex w-[140%] space-x-1">
+                                        <input
+                                          type="number"
+                                          value={Math.floor((set.timeSeconds || 0) / 3600) || ''}
+                                          onChange={(e) => {
+                                            const h = parseInt(e.target.value) || 0;
+                                            const m = Math.floor(((set.timeSeconds || 0) % 3600) / 60);
+                                            const s = (set.timeSeconds || 0) % 60;
+                                            updateTargetSet(exercise.id, sIdx, 'timeSeconds', h * 3600 + m * 60 + s);
+                                          }}
+                                          placeholder="h"
+                                          className="input-number-small px-1 text-xs"
+                                        />
+                                        <span className="text-white/30 self-center">:</span>
+                                        <input
+                                          type="number"
+                                          value={Math.floor(((set.timeSeconds || 0) % 3600) / 60) || ''}
+                                          onChange={(e) => {
+                                            const m = parseInt(e.target.value) || 0;
+                                            const h = Math.floor((set.timeSeconds || 0) / 3600);
+                                            const s = (set.timeSeconds || 0) % 60;
+                                            updateTargetSet(exercise.id, sIdx, 'timeSeconds', h * 3600 + m * 60 + s);
+                                          }}
+                                          placeholder="m"
+                                          className="input-number-small px-1 text-xs"
+                                        />
+                                        <span className="text-white/30 self-center">:</span>
+                                        <input
+                                          type="number"
+                                          value={(set.timeSeconds || 0) % 60 || ''}
+                                          onChange={(e) => {
+                                            const s = parseInt(e.target.value) || 0;
+                                            const h = Math.floor((set.timeSeconds || 0) / 3600);
+                                            const m = Math.floor(((set.timeSeconds || 0) % 3600) / 60);
+                                            updateTargetSet(exercise.id, sIdx, 'timeSeconds', h * 3600 + m * 60 + s);
+                                          }}
+                                          placeholder="s"
+                                          className="input-number-small px-1 text-xs"
+                                        />
+                                      </div>
+                                      <input
+                                        type="number"
+                                        value={set.distance || ''}
+                                        onChange={(e) => updateTargetSet(exercise.id, sIdx, 'distance', parseFloat(e.target.value))}
+                                        placeholder="Dist"
+                                        className="input-number-small w-[60%]"
+                                      />
+                                    </>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeTargetSet(exercise.id, sIdx)}
+                                  className="p-1 text-white/10 hover:text-red-500 flex-shrink-0"
+                                >
+                                  <Minus size={14} />
+                                </button>
+                              </div>
+
+                              {/* Second Row: Special Techniques (RP/DS config) */}
+                              <div className="flex items-center space-x-1.5 pl-6 w-full flex-wrap gap-y-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const nextMode = set.setMode === 'restPause' ? 'normal' : 'restPause';
+                                    updateTargetSet(exercise.id, sIdx, 'setMode', nextMode);
+                                    if (nextMode !== 'normal' && !set.subSetsCount) {
+                                      updateTargetSet(exercise.id, sIdx, 'subSetsCount', 1);
+                                    }
+                                  }}
+                                  className={`text-[8px] font-black px-1.5 py-0.5 rounded transition-all border uppercase ${set.setMode === 'restPause'
+                                    ? 'border-orange-500 bg-orange-500/10 text-orange-400 font-bold'
+                                    : 'border-white/10 text-white/40 hover:border-white/20 hover:text-white'
+                                    }`}
+                                >
+                                  RP
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const nextMode = set.setMode === 'dropSet' ? 'normal' : 'dropSet';
+                                    updateTargetSet(exercise.id, sIdx, 'setMode', nextMode);
+                                    if (nextMode !== 'normal' && !set.subSetsCount) {
+                                      updateTargetSet(exercise.id, sIdx, 'subSetsCount', 1);
+                                    }
+                                  }}
+                                  className={`text-[8px] font-black px-1.5 py-0.5 rounded transition-all border uppercase ${set.setMode === 'dropSet'
+                                    ? 'border-purple-500 bg-purple-500/10 text-purple-400 font-bold'
+                                    : 'border-white/10 text-white/40 hover:border-white/20 hover:text-white'
+                                    }`}
+                                >
+                                  DS
+                                </button>
+
+                                {set.setMode && set.setMode !== 'normal' && (
+                                  <div className="flex items-center space-x-1 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                                    <span className="text-[7px] text-white/40 uppercase font-black">Sub:</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const current = set.subSetsCount || 1;
+                                        if (current > 1) {
+                                          updateTargetSet(exercise.id, sIdx, 'subSetsCount', current - 1);
+                                        }
                                       }}
-                                      placeholder="min"
-                                      className="input-number-small px-1"
-                                    />
-                                    <span className="text-white/30 self-center">:</span>
-                                    <input
-                                      type="number"
-                                      value={(set.timeSeconds || 0) % 60 || ''}
-                                      onChange={(e) => {
-                                        const s = parseInt(e.target.value) || 0;
-                                        const m = Math.floor((set.timeSeconds || 0) / 60);
-                                        updateTargetSet(exercise.id, sIdx, 'timeSeconds', m * 60 + s);
+                                      className="w-3.5 h-3.5 flex items-center justify-center rounded bg-white/10 text-white hover:bg-white/20 text-[9px] font-bold"
+                                    >
+                                      -
+                                    </button>
+                                    <span className="text-[9px] font-bold font-mono text-accent min-w-3 text-center">
+                                      {set.subSetsCount || 1}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const current = set.subSetsCount || 1;
+                                        if (current < 5) {
+                                          updateTargetSet(exercise.id, sIdx, 'subSetsCount', current + 1);
+                                        }
                                       }}
-                                      placeholder="sec"
-                                      className="input-number-small px-1"
-                                    />
+                                      className="w-3.5 h-3.5 flex items-center justify-center rounded bg-white/10 text-white hover:bg-white/20 text-[9px] font-bold"
+                                    >
+                                      +
+                                    </button>
                                   </div>
-                                  <input
-                                    type="number"
-                                    value={set.weight || ''}
-                                    onChange={(e) => updateTargetSet(exercise.id, sIdx, 'weight', parseFloat(e.target.value))}
-                                    placeholder="+Kg"
-                                    className="input-number-small"
-                                  />
-                                </>
-                              )}
-                              {exercise.type === 'cardio' && (
-                                <>
-                                  <div className="flex w-[140%] space-x-1">
-                                    <input
-                                      type="number"
-                                      value={Math.floor((set.timeSeconds || 0) / 3600) || ''}
-                                      onChange={(e) => {
-                                        const h = parseInt(e.target.value) || 0;
-                                        const m = Math.floor(((set.timeSeconds || 0) % 3600) / 60);
-                                        const s = (set.timeSeconds || 0) % 60;
-                                        updateTargetSet(exercise.id, sIdx, 'timeSeconds', h * 3600 + m * 60 + s);
+                                )}
+
+                                {set.setMode === 'restPause' && (
+                                  <div className="flex items-center space-x-1 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                                    <span className="text-[7px] text-orange-400/80 uppercase font-black">Rec:</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const current = set.restPauseSeconds || 20;
+                                        if (current > 5) {
+                                          updateTargetSet(exercise.id, sIdx, 'restPauseSeconds', current - 5);
+                                        }
                                       }}
-                                      placeholder="h"
-                                      className="input-number-small px-1 text-xs"
-                                    />
-                                    <span className="text-white/30 self-center">:</span>
-                                    <input
-                                      type="number"
-                                      value={Math.floor(((set.timeSeconds || 0) % 3600) / 60) || ''}
-                                      onChange={(e) => {
-                                        const m = parseInt(e.target.value) || 0;
-                                        const h = Math.floor((set.timeSeconds || 0) / 3600);
-                                        const s = (set.timeSeconds || 0) % 60;
-                                        updateTargetSet(exercise.id, sIdx, 'timeSeconds', h * 3600 + m * 60 + s);
+                                      className="w-3.5 h-3.5 flex items-center justify-center rounded bg-white/10 text-white hover:bg-white/20 text-[9px] font-bold"
+                                    >
+                                      -
+                                    </button>
+                                    <span className="text-[9px] font-bold font-mono text-accent min-w-[14px] text-center">
+                                      {set.restPauseSeconds || 20}s
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const current = set.restPauseSeconds || 20;
+                                        if (current < 90) {
+                                          updateTargetSet(exercise.id, sIdx, 'restPauseSeconds', current + 5);
+                                        }
                                       }}
-                                      placeholder="m"
-                                      className="input-number-small px-1 text-xs"
-                                    />
-                                    <span className="text-white/30 self-center">:</span>
-                                    <input
-                                      type="number"
-                                      value={(set.timeSeconds || 0) % 60 || ''}
-                                      onChange={(e) => {
-                                        const s = parseInt(e.target.value) || 0;
-                                        const h = Math.floor((set.timeSeconds || 0) / 3600);
-                                        const m = Math.floor(((set.timeSeconds || 0) % 3600) / 60);
-                                        updateTargetSet(exercise.id, sIdx, 'timeSeconds', h * 3600 + m * 60 + s);
-                                      }}
-                                      placeholder="s"
-                                      className="input-number-small px-1 text-xs"
-                                    />
+                                      className="w-3.5 h-3.5 flex items-center justify-center rounded bg-white/10 text-white hover:bg-white/20 text-[9px] font-bold"
+                                    >
+                                      +
+                                    </button>
                                   </div>
-                                  <input
-                                    type="number"
-                                    value={set.distance || ''}
-                                    onChange={(e) => updateTargetSet(exercise.id, sIdx, 'distance', parseFloat(e.target.value))}
-                                    placeholder="Dist"
-                                    className="input-number-small w-[60%]"
-                                  />
-                                </>
-                              )}
+                                )}
+                              </div>
                             </div>
-                            <button
-                              onClick={() => removeTargetSet(exercise.id, sIdx)}
-                              className="p-1 text-white/10 hover:text-red-500"
-                            >
-                              <Minus size={14} />
-                            </button>
-                          </div>
-                        ))}
+                        )})}
                       </div>
                     </div>
 

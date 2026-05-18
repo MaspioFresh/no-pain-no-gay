@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { WorkoutPlan, WeightUnit } from '../types';
-import { Play, ClipboardList, Plus, History as HistoryIcon, Download, Settings, Settings2, Trash2, Edit2, TrendingUp } from 'lucide-react';
+import { Play, ClipboardList, Plus, History as HistoryIcon, Download, Settings, Settings2, Trash2, Edit2, TrendingUp, Archive, ArchiveRestore } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Modal, useModal } from './Modal';
 
@@ -23,6 +23,8 @@ interface DashboardProps {
 
 export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, onModifyPlan, onDeletePlan, onAddPlan, onCreatePlan, onViewHistory, onViewProgress, onManageData, hasActiveSession, onResumeSession }: DashboardProps) {
   const { modalState, closeModal, showAlert, showConfirm } = useModal();
+  const [showArchived, setShowArchived] = useState(false);
+
   const exportPlan = (plan: WorkoutPlan) => {
     const data = { version: '1.0', type: 'single_plan', plan };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -54,6 +56,9 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
     reader.readAsText(file);
     e.target.value = ''; // Reset input
   };
+
+  const activePlans = plans.filter(p => !p.isArchived);
+  const archivedPlans = plans.filter(p => p.isArchived);
 
   return (
     <div className="flex flex-col space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -118,13 +123,13 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
           </div>
         </div>
 
-        {plans.length === 0 ? (
+        {activePlans.length === 0 ? (
           <div className="p-8 border border-dashed border-white/10 rounded-xl text-center text-white/30">
-            Nessuna scheda trovata. Creane una per iniziare.
+            Nessuna scheda attiva trovata. Creane una per iniziare.
           </div>
         ) : (
           <div className="space-y-4">
-            {plans.map((plan) => (
+            {activePlans.map((plan) => (
               <motion.div
                 key={plan.id}
                 whileTap={{ scale: 0.98 }}
@@ -163,6 +168,16 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      onAddPlan?.({ ...plan, isArchived: true });
+                    }}
+                    className="btn-icon text-accent/60 hover:text-accent hover:bg-accent/10"
+                    title="Archivia Scheda"
+                  >
+                    <Archive size={14} className="stroke-[2.5]" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
                       onDeletePlan(plan.id);
                     }}
                     className="btn-icon text-red-500/30 hover:text-red-500 hover:bg-red-500/10"
@@ -179,6 +194,51 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
                 </div>
               </motion.div>
             ))}
+          </div>
+        )}
+
+        {/* Collapsible Archived Plans Section */}
+        {archivedPlans.length > 0 && (
+          <div className="pt-4 border-t border-white/5">
+            <button
+              onClick={() => setShowArchived(!showArchived)}
+              className="flex items-center space-x-2 text-[10px] mono-label text-white/40 hover:text-white/80 transition-colors uppercase tracking-widest pl-1"
+            >
+              <Archive size={12} />
+              <span>{showArchived ? 'Nascondi Archivio' : `Mostra Archivio (${archivedPlans.length})`}</span>
+            </button>
+
+            {showArchived && (
+              <div className="space-y-3 mt-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                {archivedPlans.map((plan) => (
+                  <div
+                    key={plan.id}
+                    className="hardware-card p-4 flex items-center justify-between bg-white/[0.01] border-white/5 opacity-60 hover:opacity-100 transition-opacity"
+                  >
+                    <div>
+                      <h4 className="font-bold text-base leading-none mb-1 text-white/80">{plan.name}</h4>
+                      <p className="text-[9px] text-white/30 uppercase tracking-tighter">{plan.exercises.length} esercizi (Archiviata)</p>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => onAddPlan?.({ ...plan, isArchived: false })}
+                        className="btn-icon text-accent hover:bg-accent/20"
+                        title="Ripristina Scheda"
+                      >
+                        <ArchiveRestore size={16} />
+                      </button>
+                      <button
+                        onClick={() => onDeletePlan(plan.id)}
+                        className="btn-icon text-red-500/30 hover:text-red-500 hover:bg-red-500/10"
+                        title="Elimina Scheda Definitivamente"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

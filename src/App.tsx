@@ -87,7 +87,18 @@ export default function App() {
         timeSeconds: t.timeSeconds || 0,
         distance: t.distance || 0,
         unit: data.settings.unit,
-        completed: false
+        completed: false,
+        setMode: t.setMode || 'normal',
+        subSetsCount: t.subSetsCount || 0,
+        restPauseSeconds: t.restPauseSeconds || 20,
+        subSets: t.setMode && t.setMode !== 'normal'
+          ? Array.from({ length: t.subSetsCount || 1 }).map(() => ({
+              reps: 0,
+              weight: t.weight || 0,
+              completed: false,
+              isMaxReps: false
+            }))
+          : undefined
       })),
       barbellWeightUsed: ex.barbellWeight || 0
     })));
@@ -145,6 +156,29 @@ export default function App() {
     setActivePlan(updatedPlan);
   };
 
+  const handleDeletePlan = (planId: string) => {
+    const plan = data.plans.find(p => p.id === planId);
+    showConfirm(
+      'Elimina scheda',
+      `Sei sicuro di voler eliminare la scheda "${plan?.name || ''}"? Questa azione è irreversibile.`,
+      () => deletePlan(planId),
+      'Elimina',
+      true
+    );
+  };
+
+  const handleDeleteSession = (sessionId: string) => {
+    const session = data.sessions.find(s => s.id === sessionId);
+    const dateStr = session ? new Date(session.date).toLocaleDateString('it-IT') : '';
+    showConfirm(
+      'Elimina allenamento',
+      `Sei sicuro di voler eliminare l'allenamento del ${dateStr}? Questa azione è irreversibile.`,
+      () => deleteSession(sessionId),
+      'Elimina',
+      true
+    );
+  };
+
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':
@@ -162,7 +196,7 @@ export default function App() {
               setModifyingPlan(plan);
               setCurrentView('modify-plan');
             }}
-            onDeletePlan={deletePlan}
+            onDeletePlan={handleDeletePlan}
             onAddPlan={addPlan}
             onCreatePlan={() => {
               setModifyingPlan(null);
@@ -190,7 +224,7 @@ export default function App() {
                   <div className="flex flex-wrap gap-2">
                     {(ex.targetSets || []).map((s, i) => (
                       <span key={i} className="px-2 py-1 bg-white/5 rounded text-[10px] mono-label">
-                        SET {i + 1}: {s.reps} RIP {s.weight ? `${s.weight}kg` : ''}
+                        SET {i + 1}: {s.isMaxReps ? 'MAX' : `${s.reps} RIP`} {s.weight ? `${s.weight}kg` : ''}
                       </span>
                     ))}
                   </div>
@@ -249,7 +283,7 @@ export default function App() {
             plans={data.plans}
             settings={data.settings}
             onBack={() => setCurrentView('dashboard')}
-            onDeleteSession={deleteSession}
+            onDeleteSession={handleDeleteSession}
             onEditSession={handleEditSession}
           />
         );
@@ -274,6 +308,7 @@ export default function App() {
       case 'create-plan':
         return (
           <PlanEditor
+            settings={data.settings}
             onSave={handleSavePlan}
             onCancel={() => setCurrentView('dashboard')}
           />
@@ -281,6 +316,7 @@ export default function App() {
       case 'modify-plan':
         return (
           <PlanEditor
+            settings={data.settings}
             existingPlan={modifyingPlan || undefined}
             onSave={handleSavePlan}
             onCancel={() => setCurrentView('dashboard')}

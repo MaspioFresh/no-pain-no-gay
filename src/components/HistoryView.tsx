@@ -128,8 +128,10 @@ export function HistoryView({ sessions, plans, settings, onBack, onDeleteSession
                                 {planEx?.type === 'cardio'
                                   ? `${formatTimeSeconds(s.timeSeconds || 0, true)} - ${s.distance || 0}${s.unit}`
                                   : planEx?.type === 'time'
-                                  ? `${formatTimeSeconds(s.timeSeconds || 0, false)} + ${s.weight || 0}${s.unit}`
-                                  : `${displayWeight}${s.unit || session.unitAtTime || 'kg'}×${s.reps}`}
+                                    ? `${formatTimeSeconds(s.timeSeconds || 0, false)} + ${s.weight || 0}${s.unit}`
+                                    : planEx?.type === 'bodyweight'
+                                      ? (s.weight ? `+${s.weight}${s.unit || session.unitAtTime || 'kg'}×${s.reps}` : `BW×${s.reps}`)
+                                      : `${displayWeight}${s.unit || session.unitAtTime || 'kg'}×${s.reps}`}
                               </span>
                             );
                           })}
