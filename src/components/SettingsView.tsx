@@ -54,7 +54,10 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
         body: 'Questo è un test delle notifiche del timer!',
         icon: iconUrl,
         tag: 'rest-timer',
-        renotify: true
+        renotify: true,
+        vibrate: [200, 100, 200],
+        requireInteraction: true,
+        silent: false
       };
 
       if ('serviceWorker' in navigator) {
@@ -138,6 +141,16 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
                   onClick={() => {
                     onUpdateSettings({ themeColor: color.value });
                     document.documentElement.style.setProperty('--accent', color.value);
+                    const COMPLEMENTARY_COLORS: Record<string, string> = {
+                      '#dcfc04': '#a855f7', // Yellow -> Purple
+                      '#4ade80': '#ec4899', // Green -> Pink
+                      '#3b82f6': '#f97316', // Blue -> Orange
+                      '#a855f7': '#dcfc04', // Purple -> Yellow
+                      '#f97316': '#3b82f6', // Orange -> Blue
+                      '#ef4444': '#06b6d4', // Red -> Cyan
+                    };
+                    const complementary = COMPLEMENTARY_COLORS[color.value] || '#a855f7';
+                    document.documentElement.style.setProperty('--accent-complementary', complementary);
                   }}
                   className={`w-10 h-10 rounded-full border-2 transition-all active:scale-90 ${settings.themeColor === color.value ? 'border-white scale-110 shadow-[0_0_15px_currentColor]' : 'border-transparent'}`}
                   style={{ backgroundColor: color.value, color: color.value }}

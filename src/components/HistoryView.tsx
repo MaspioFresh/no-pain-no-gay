@@ -60,35 +60,37 @@ export function HistoryView({ sessions, plans, settings, onBack, onDeleteSession
               animate={{ opacity: 1, x: 0 }}
               className="hardware-card overflow-hidden"
             >
-              <div className="p-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
-                <div className="flex items-center space-x-3">
+              <div className="p-4 border-b border-white/5 bg-white/5 flex justify-between items-center gap-4">
+                <div className="flex items-center space-x-3 flex-shrink-0">
                   <div className="bg-accent/20 p-2 rounded text-accent">
                     <Calendar size={16} />
                   </div>
                   <span className="font-bold">{formatDate(session.date)}</span>
                 </div>
-                <div className="flex items-center space-x-1">
-                  <span className="mono-label text-[10px] mr-2">{getPlanName(session.planId)}</span>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditSession(session);
-                    }}
-                    className="btn-icon text-white/20 hover:text-accent hover:bg-accent/10"
-                    title="Modifica"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteSession(session.id);
-                    }}
-                    className="btn-icon text-white/20 hover:text-red-500 hover:bg-red-500/10"
-                    title="Elimina"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                <div className="flex items-center space-x-1 min-w-0 justify-end flex-1">
+                  <span className="mono-label text-[10px] mr-2 truncate" title={getPlanName(session.planId)}>{getPlanName(session.planId)}</span>
+                  <div className="flex items-center space-x-1 flex-shrink-0">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditSession(session);
+                      }}
+                      className="btn-icon text-white/20 hover:text-accent hover:bg-accent/10"
+                      title="Modifica"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteSession(session.id);
+                      }}
+                      className="btn-icon text-white/20 hover:text-red-500 hover:bg-red-500/10"
+                      title="Elimina"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="p-4 space-y-2">

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { WorkoutPlan, WeightUnit } from '../types';
-import { Play, ClipboardList, Plus, History as HistoryIcon, Download, Settings, Settings2, Trash2, Edit2, TrendingUp, Archive, ArchiveRestore } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Play, ClipboardList, Plus, History as HistoryIcon, Download, Settings, Settings2, Trash2, Edit2, TrendingUp, Archive, ArchiveRestore, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Modal, useModal } from './Modal';
 
 interface DashboardProps {
@@ -24,6 +24,14 @@ interface DashboardProps {
 export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, onModifyPlan, onDeletePlan, onAddPlan, onCreatePlan, onViewHistory, onViewProgress, onManageData, hasActiveSession, onResumeSession }: DashboardProps) {
   const { modalState, closeModal, showAlert, showConfirm } = useModal();
   const [showArchived, setShowArchived] = useState(false);
+  const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({});
+
+  const togglePlanExpansion = (planId: string) => {
+    setExpandedPlans(prev => ({
+      ...prev,
+      [planId]: !prev[planId]
+    }));
+  };
 
   const exportPlan = (plan: WorkoutPlan) => {
     const data = { version: '1.0', type: 'single_plan', plan };
@@ -133,65 +141,93 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
               <motion.div
                 key={plan.id}
                 whileTap={{ scale: 0.98 }}
-                className="hardware-card p-4 flex items-center justify-between group bg-white/[0.02]"
+                className="hardware-card p-4 flex flex-col group bg-white/[0.02]"
               >
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center space-x-4 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center border border-white/5 flex-shrink-0">
+                      <button
+                        onClick={() => onViewPlan?.(plan)}
+                        className="p-2 text-ghost rounded-full transition-all active:scale-90"
+                        title="Dettagli Scheda"
+                      >
+                        <ClipboardList size={20} className="stroke-[2.5]" />
+                      </button>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-lg leading-tight text-white break-words">{plan.name}</h3>
+                      <p className="text-[10px] text-white/40 uppercase tracking-tighter mt-0.5">{plan.exercises.length} esercizi</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 flex-shrink-0">
                     <button
-                      onClick={() => onViewPlan?.(plan)}
-                      className="p-2 text-ghost rounded-full transition-all active:scale-90"
-                      title="Dettagli Scheda"
+                      onClick={() => onStartPlan(plan)}
+                      className="w-10 h-10 rounded-full bg-transparent text-accent flex items-center justify-center shadow-[0_0_15px_rgba(220,252,4,0.1)] hover:scale-110 hover:bg-accent/10 active:scale-90 transition-all border border-accent"
+                      title="Inizia Allenamento"
                     >
-                      <ClipboardList size={20} className="stroke-[2.5]" />
+                      <Play size={18} fill="currentColor" className="text-accent" />
+                    </button>
+                    <button
+                      onClick={() => togglePlanExpansion(plan.id)}
+                      className="btn-icon text-white/40 hover:text-white"
+                      title={expandedPlans[plan.id] ? "Nascondi opzioni" : "Mostra opzioni"}
+                    >
+                      <ChevronDown 
+                        size={18} 
+                        className={`transform transition-transform duration-300 ${expandedPlans[plan.id] ? 'rotate-180' : ''}`} 
+                      />
                     </button>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg leading-none mb-1">{plan.name}</h3>
-                    <p className="text-[10px] text-white/40 uppercase tracking-tighter">{plan.exercises.length} esercizi</p>
-                  </div>
                 </div>
-                <div className="flex items-center space-x-1">
-                  <button
-                    onClick={() => onModifyPlan?.(plan)}
-                    className="btn-icon text-accent hover:bg-accent/20"
-                    title="Modifica Scheda"
-                  >
-                    <Edit2 size={14} className="stroke-[2.5]" />
-                  </button>
-                  <button
-                    onClick={() => exportPlan(plan)}
-                    className="btn-icon text-accent hover:bg-accent/20"
-                    title="Esporta Scheda"
-                  >
-                    <Download size={14} className="stroke-[2.5]" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAddPlan?.({ ...plan, isArchived: true });
-                    }}
-                    className="btn-icon text-accent/60 hover:text-accent hover:bg-accent/10"
-                    title="Archivia Scheda"
-                  >
-                    <Archive size={14} className="stroke-[2.5]" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeletePlan(plan.id);
-                    }}
-                    className="btn-icon text-red-500/30 hover:text-red-500 hover:bg-red-500/10"
-                    title="Elimina Scheda"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                  <button
-                    onClick={() => onStartPlan(plan)}
-                    className="w-10 h-10 rounded-full bg-transparent text-accent flex items-center justify-center shadow-[0_0_15px_rgba(220,252,4,0.1)] hover:scale-110 hover:bg-accent/10 active:scale-90 transition-all ml-1 group border border-accent"
-                  >
-                    <Play size={18} fill="currentColor" className="text-accent" />
-                  </button>
-                </div>
+
+                <AnimatePresence initial={false}>
+                  {expandedPlans[plan.id] && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                      animate={{ height: 'auto', opacity: 1, marginTop: 12 }}
+                      exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeInOut' }}
+                      className="overflow-hidden"
+                    >
+                      <div className="flex items-center space-x-2 pt-3 border-t border-white/5">
+                        <button
+                          onClick={() => onModifyPlan?.(plan)}
+                          className="btn-icon text-accent hover:bg-accent/20"
+                          title="Modifica Scheda"
+                        >
+                          <Edit2 size={16} className="stroke-[2.5]" />
+                        </button>
+                        <button
+                          onClick={() => exportPlan(plan)}
+                          className="btn-icon text-accent hover:bg-accent/20"
+                          title="Esporta Scheda"
+                        >
+                          <Download size={16} className="stroke-[2.5]" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAddPlan?.({ ...plan, isArchived: true });
+                          }}
+                          className="btn-icon text-accent/60 hover:text-accent hover:bg-accent/10"
+                          title="Archivia Scheda"
+                        >
+                          <Archive size={16} className="stroke-[2.5]" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeletePlan(plan.id);
+                          }}
+                          className="btn-icon text-red-500/30 hover:text-red-500 hover:bg-red-500/10"
+                          title="Elimina Scheda"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             ))}
           </div>
@@ -213,13 +249,13 @@ export function Dashboard({ plans, unit, onToggleUnit, onStartPlan, onViewPlan, 
                 {archivedPlans.map((plan) => (
                   <div
                     key={plan.id}
-                    className="hardware-card p-4 flex items-center justify-between bg-white/[0.01] border-white/5 opacity-60 hover:opacity-100 transition-opacity"
+                    className="hardware-card p-4 flex items-center justify-between gap-4 bg-white/[0.01] border-white/5 opacity-60 hover:opacity-100 transition-opacity"
                   >
-                    <div>
-                      <h4 className="font-bold text-base leading-none mb-1 text-white/80">{plan.name}</h4>
-                      <p className="text-[9px] text-white/30 uppercase tracking-tighter">{plan.exercises.length} esercizi (Archiviata)</p>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-base leading-tight text-white/80 break-words">{plan.name}</h4>
+                      <p className="text-[9px] text-white/30 uppercase tracking-tighter mt-1">{plan.exercises.length} esercizi (Archiviata)</p>
                     </div>
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-1 flex-shrink-0">
                       <button
                         onClick={() => onAddPlan?.({ ...plan, isArchived: false })}
                         className="btn-icon text-accent hover:bg-accent/20"

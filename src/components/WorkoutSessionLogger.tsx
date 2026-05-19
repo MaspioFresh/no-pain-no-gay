@@ -87,7 +87,9 @@ export function RestTimer({
               icon: iconUrl,
               tag: 'rest-timer',
               renotify: true,
-              silent: true // L'app produce già il suo segnale acustico
+              vibrate: [200, 100, 200],
+              requireInteraction: true,
+              silent: false
             };
 
             if ('serviceWorker' in navigator) {
@@ -578,24 +580,24 @@ export function WorkoutSessionLogger({
     <div className={`flex flex-col space-y-6 pb-32 ${focusMode ? 'pb-48' : ''}`}>
       <div className="sticky top-0 bg-[#0c0d0e]/95 backdrop-blur-lg z-20 border-b border-white/10 px-1">
         {/* Row 1: title + buttons */}
-        <div className="flex items-center justify-between py-3">
-          <div className="flex items-center space-x-3">
-            <button onClick={onCancel} className="p-2 rounded-full bg-transparent border border-accent text-accent hover:bg-accent/10" title="Riduci a icona">
+        <div className="flex items-center justify-between py-3 gap-4">
+          <div className="flex items-center space-x-3 min-w-0">
+            <button onClick={onCancel} className="p-2 rounded-full bg-transparent border border-accent text-accent hover:bg-accent/10 flex-shrink-0" title="Riduci a icona">
               <ArrowLeft size={20} />
             </button>
             <button 
               onClick={() => setFocusMode(!focusMode)} 
-              className={`p-2 rounded-full border transition-all ${focusMode ? 'bg-accent border-accent text-[#0c0d0e]' : 'bg-transparent border-white/20 text-white/40 hover:border-accent hover:text-accent'}`}
+              className={`p-2 rounded-full border transition-all flex-shrink-0 ${focusMode ? 'bg-accent border-accent text-[#0c0d0e]' : 'bg-transparent border-white/20 text-white/40 hover:border-accent hover:text-accent'}`}
               title={focusMode ? "Disattiva Focus Mode" : "Attiva Focus Mode"}
             >
               <ScanLine size={20} />
             </button>
-            <div>
-              <h2 className="text-sm font-bold tracking-tight leading-none mb-1">{plan.name}</h2>
-              <p className="text-[9px] mono-label accent-text uppercase tracking-widest leading-none">In corso • {unit}</p>
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold tracking-tight leading-none mb-1 truncate" title={plan.name}>{plan.name}</h2>
+              <p className="text-[9px] mono-label accent-text uppercase tracking-widest leading-none truncate">In corso • {unit}</p>
             </div>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 flex-shrink-0">
             <button
               onClick={onFinish}
               className="p-2 rounded-full bg-transparent border border-red-500 text-red-500 hover:bg-red-500/10 active:scale-95 transition-all flex items-center justify-center"
@@ -797,7 +799,7 @@ export function WorkoutSessionLogger({
                                             <><div className="w-1/2">{isPerSide ? 'P.LATO' : 'PESO'}</div><div className="w-8 text-center mx-1">UNT</div><div className="w-1/2 flex items-center justify-center space-x-1"><span>REPS</span>{targetSet?.isMaxReps && <span className="text-[6px] font-black px-1 py-0.5 rounded bg-accent text-[#0c0d0e] uppercase tracking-wider flex-shrink-0">MAX</span>}</div></>
                                           )}
                                         </div>
-                                        <div className={`flex w-full space-x-1 items-start transition-opacity duration-300 ${set.completed ? 'opacity-30' : ''}`}>
+                                        <div className="flex w-full space-x-1 items-start transition-opacity duration-300">
                                           <div className={exercise.type === 'cardio' || exercise.type === 'time' ? 'w-20' : 'w-1/2'}>
                                             <div className="flex flex-col space-y-1">
                                               {exercise.type === 'cardio' ? (
@@ -835,13 +837,14 @@ export function WorkoutSessionLogger({
                                             </div>
                                           </div>
 
-                                          <div className="w-8 flex items-center justify-center pt-1">
+                                          <div className="w-8 flex items-center justify-center">
                                             <button
                                               onClick={() => updateSet(exIdx, setIdx, 'unit', (exercise.type === 'cardio' ? (set.unit === 'km' ? 'm' : 'km') : (set.unit === 'kg' ? 'lb' : 'kg')) as any)}
-                                              className={`text-[8px] font-black p-1 rounded min-w-[24px] uppercase border transition-all bg-transparent ${(exercise.type === 'cardio' ? set.unit === 'km' : set.unit === 'kg')
-                                                ? 'border-blue-500 text-blue-400'
-                                                : 'border-accent text-accent'
-                                                }`}
+                                              className={`h-[38px] w-full flex items-center justify-center text-[9px] font-black rounded-lg uppercase border transition-all active:scale-95 ${
+                                                (exercise.type === 'cardio' ? set.unit !== 'm' : set.unit !== 'lb')
+                                                  ? 'bg-accent text-[#0c0d0e] border-accent shadow-[0_0_3px_var(--accent)]'
+                                                  : 'bg-[var(--accent-complementary)] text-[#0c0d0e] border-[var(--accent-complementary)] shadow-[0_0_3px_var(--accent-complementary)]'
+                                              }`}
                                             >
                                               {exercise.type === 'cardio' ? (set.unit === 'km' || set.unit === 'm' ? set.unit : 'km') : (set.unit === 'kg' || set.unit === 'lb' ? set.unit : 'kg')}
                                             </button>
@@ -926,11 +929,11 @@ export function WorkoutSessionLogger({
                                             )}
                                           </div>
 
-                                          <div className="w-10 flex-shrink-0 pt-1">
+                                          <div className="w-10 flex-shrink-0">
                                             <button
                                               onClick={() => handleSetCheckToggle(exIdx, setIdx)}
-                                              className={`w-full py-2 flex items-center justify-center rounded-lg transition-all border ${set.completed
-                                                ? 'bg-transparent border-accent text-accent shadow-[0_0_10px_rgba(220,252,4,0.3)]'
+                                              className={`w-full h-[38px] flex items-center justify-center rounded-lg transition-all border active:scale-95 ${set.completed
+                                                ? 'bg-transparent border-accent text-accent shadow-[0_0_3px_var(--accent)]'
                                                 : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
                                                 }`}
                                             >
@@ -955,7 +958,7 @@ export function WorkoutSessionLogger({
                                                 : (rawWeight ? String(rawWeight) : '0');
 
                                               return (
-                                                <div key={subIdx} className={`flex flex-col space-y-1 transition-opacity duration-300 ${isSubCompleted ? 'opacity-30' : ''}`}>
+                                                <div key={subIdx} className="flex flex-col space-y-1 transition-opacity duration-300">
                                                   <div className="flex w-full text-[7px] mono-label text-white/40 uppercase items-center pl-1">
                                                     <div className="w-1/2 flex items-center space-x-1">
                                                       {set.setMode === 'dropSet' ? (
@@ -991,7 +994,7 @@ export function WorkoutSessionLogger({
                                                       />
                                                     </div>
                                                     {/* Unit Label */}
-                                                    <div className="w-8 flex items-center justify-center pt-1 text-[8px] font-mono text-white/30 uppercase">
+                                                    <div className="w-8 flex items-center justify-center text-[8px] font-mono text-white/30 uppercase h-[38px]">
                                                       {set.unit || 'kg'}
                                                     </div>
                                                     {/* Reps Input */}
@@ -1005,11 +1008,11 @@ export function WorkoutSessionLogger({
                                                       />
                                                     </div>
                                                     {/* Check Button */}
-                                                    <div className="w-10 flex-shrink-0 pt-1">
+                                                    <div className="w-10 flex-shrink-0">
                                                       <button
                                                         onClick={() => handleSubSetCheckToggle(exIdx, setIdx, subIdx)}
-                                                        className={`w-full py-2 flex items-center justify-center rounded-lg transition-all border ${isSubCompleted
-                                                          ? 'bg-transparent border-accent text-accent shadow-[0_0_10px_rgba(220,252,4,0.3)]'
+                                                        className={`w-full h-[38px] flex items-center justify-center rounded-lg transition-all border active:scale-95 ${isSubCompleted
+                                                          ? 'bg-transparent border-accent text-accent shadow-[0_0_3px_var(--accent)]'
                                                           : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
                                                           }`}
                                                       >
@@ -1225,7 +1228,7 @@ export function WorkoutSessionLogger({
                                     <><div className="w-1/2">{isPerSide ? 'P.LATO' : 'PESO'}</div><div className="w-8 text-center mx-1">UNT</div><div className="w-1/2 flex items-center justify-center space-x-1"><span>REPS</span>{targetSet?.isMaxReps && <span className="text-[6px] font-black px-1 py-0.5 rounded bg-accent text-[#0c0d0e] uppercase tracking-wider flex-shrink-0">MAX</span>}</div></>
                                   )}
                                 </div>
-                                <div className={`flex w-full space-x-1 items-start transition-opacity duration-300 ${set.completed ? 'opacity-30' : ''}`}>
+                                <div className="flex w-full space-x-1 items-start transition-opacity duration-300">
                                   {/* Left Input */}
                                   <div className={exercise.type === 'cardio' || exercise.type === 'time' ? 'w-20' : 'w-1/2'}>
                                     <div className="flex flex-col space-y-1">
@@ -1257,13 +1260,14 @@ export function WorkoutSessionLogger({
                                   </div>
 
                                   {/* Unit Button */}
-                                  <div className="w-8 flex items-center justify-center pt-1">
+                                  <div className="w-8 flex items-center justify-center">
                                     <button
                                       onClick={() => updateSet(exIdx, setIdx, 'unit', (exercise.type === 'cardio' ? (set.unit === 'km' ? 'm' : 'km') : (set.unit === 'kg' ? 'lb' : 'kg')) as any)}
-                                      className={`text-[8px] font-black p-1 rounded min-w-[24px] uppercase border transition-all bg-transparent ${(exercise.type === 'cardio' ? set.unit === 'km' : set.unit === 'kg')
-                                        ? 'border-blue-500 text-blue-400'
-                                        : 'border-accent text-accent'
-                                        }`}
+                                      className={`h-[38px] w-full flex items-center justify-center text-[9px] font-black rounded-lg uppercase border transition-all active:scale-95 ${
+                                        (exercise.type === 'cardio' ? set.unit !== 'm' : set.unit !== 'lb')
+                                          ? 'bg-accent text-[#0c0d0e] border-accent shadow-[0_0_3px_var(--accent)]'
+                                          : 'bg-[var(--accent-complementary)] text-[#0c0d0e] border-[var(--accent-complementary)] shadow-[0_0_3px_var(--accent-complementary)]'
+                                      }`}
                                     >
                                       {exercise.type === 'cardio' ? (set.unit === 'km' || set.unit === 'm' ? set.unit : 'km') : (set.unit === 'kg' || set.unit === 'lb' ? set.unit : 'kg')}
                                     </button>
@@ -1349,11 +1353,11 @@ export function WorkoutSessionLogger({
                                     )}
                                   </div>
 
-                                  <div className="w-10 flex-shrink-0 pt-1">
+                                  <div className="w-10 flex-shrink-0">
                                     <button
                                       onClick={() => handleSetCheckToggle(exIdx, setIdx)}
-                                      className={`w-full py-2 flex items-center justify-center rounded-lg transition-all border ${set.completed
-                                        ? 'bg-transparent border-accent text-accent shadow-[0_0_10px_rgba(220,252,4,0.3)]'
+                                      className={`w-full h-[38px] flex items-center justify-center rounded-lg transition-all border active:scale-95 ${set.completed
+                                        ? 'bg-transparent border-accent text-accent shadow-[0_0_3px_var(--accent)]'
                                         : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
                                         }`}
                                     >
@@ -1378,7 +1382,7 @@ export function WorkoutSessionLogger({
                                         : (rawWeight ? String(rawWeight) : '0');
 
                                       return (
-                                        <div key={subIdx} className={`flex flex-col space-y-1 transition-opacity duration-300 ${isSubCompleted ? 'opacity-30' : ''}`}>
+                                        <div key={subIdx} className="flex flex-col space-y-1 transition-opacity duration-300">
                                           <div className="flex w-full text-[7px] mono-label text-white/40 uppercase items-center pl-1">
                                             <div className="w-1/2 flex items-center space-x-1">
                                               {set.setMode === 'dropSet' ? (
@@ -1414,7 +1418,7 @@ export function WorkoutSessionLogger({
                                               />
                                             </div>
                                             {/* Unit Label */}
-                                            <div className="w-8 flex items-center justify-center pt-1 text-[8px] font-mono text-white/30 uppercase">
+                                            <div className="w-8 flex items-center justify-center text-[8px] font-mono text-white/30 uppercase h-[38px]">
                                               {set.unit || 'kg'}
                                             </div>
                                             {/* Reps Input */}
@@ -1428,11 +1432,11 @@ export function WorkoutSessionLogger({
                                               />
                                             </div>
                                             {/* Check Button */}
-                                            <div className="w-10 flex-shrink-0 pt-1">
+                                            <div className="w-10 flex-shrink-0">
                                               <button
                                                 onClick={() => handleSubSetCheckToggle(exIdx, setIdx, subIdx)}
-                                                className={`w-full py-2 flex items-center justify-center rounded-lg transition-all border ${isSubCompleted
-                                                  ? 'bg-transparent border-accent text-accent shadow-[0_0_10px_rgba(220,252,4,0.3)]'
+                                                className={`w-full h-[38px] flex items-center justify-center rounded-lg transition-all border active:scale-95 ${isSubCompleted
+                                                  ? 'bg-transparent border-accent text-accent shadow-[0_0_3px_var(--accent)]'
                                                   : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
                                                   }`}
                                               >

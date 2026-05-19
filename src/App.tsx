@@ -60,9 +60,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Apply theme color
+    // Apply theme color and its complementary color
     if (data.settings?.themeColor) {
-      document.documentElement.style.setProperty('--accent', data.settings.themeColor);
+      const color = data.settings.themeColor;
+      document.documentElement.style.setProperty('--accent', color);
+      
+      const COMPLEMENTARY_COLORS: Record<string, string> = {
+        '#dcfc04': '#a855f7', // Yellow -> Purple
+        '#4ade80': '#ec4899', // Green -> Pink
+        '#3b82f6': '#f97316', // Blue -> Orange
+        '#a855f7': '#dcfc04', // Purple -> Yellow
+        '#f97316': '#3b82f6', // Orange -> Blue
+        '#ef4444': '#06b6d4', // Red -> Cyan
+      };
+      const complementary = COMPLEMENTARY_COLORS[color] || '#a855f7';
+      document.documentElement.style.setProperty('--accent-complementary', complementary);
     }
   }, [data.settings?.themeColor]);
 
