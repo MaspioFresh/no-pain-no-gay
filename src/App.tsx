@@ -73,7 +73,20 @@ export default function App() {
         '#f97316': '#3b82f6', // Orange -> Blue
         '#ef4444': '#06b6d4', // Red -> Cyan
       };
-      const complementary = COMPLEMENTARY_COLORS[color] || '#a855f7';
+      
+      let complementary = COMPLEMENTARY_COLORS[color.toLowerCase()];
+      if (!complementary) {
+        try {
+          const cleanHex = color.replace('#', '');
+          const r = 255 - parseInt(cleanHex.substring(0, 2), 16);
+          const g = 255 - parseInt(cleanHex.substring(2, 4), 16);
+          const b = 255 - parseInt(cleanHex.substring(4, 6), 16);
+          const pad = (num: number) => num.toString(16).padStart(2, '0');
+          complementary = `#${pad(r)}${pad(g)}${pad(b)}`;
+        } catch (e) {
+          complementary = '#a855f7';
+        }
+      }
       document.documentElement.style.setProperty('--accent-complementary', complementary);
     }
   }, [data.settings?.themeColor]);

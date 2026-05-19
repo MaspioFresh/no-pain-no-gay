@@ -134,7 +134,7 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
           {/* Theme Color */}
           <div className="space-y-3">
             <label className="text-sm font-bold text-white/80">Colore Tema</label>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 items-center">
               {THEME_COLORS.map(color => (
                 <button
                   key={color.value}
@@ -157,6 +157,60 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
                   title={color.name}
                 />
               ))}
+
+              {/* Special Custom Color Button */}
+              {(() => {
+                const isPreset = THEME_COLORS.some(c => c.value.toLowerCase() === settings.themeColor?.toLowerCase());
+                const customColorVal = isPreset ? '#ffffff' : (settings.themeColor || '#ffffff');
+                
+                const updateThemeColor = (val: string) => {
+                  onUpdateSettings({ themeColor: val });
+                  document.documentElement.style.setProperty('--accent', val);
+                  
+                  // Compute complementary color (invert RGB)
+                  try {
+                    const cleanHex = val.replace('#', '');
+                    const r = 255 - parseInt(cleanHex.substring(0, 2), 16);
+                    const g = 255 - parseInt(cleanHex.substring(2, 4), 16);
+                    const b = 255 - parseInt(cleanHex.substring(4, 6), 16);
+                    const pad = (num: number) => num.toString(16).padStart(2, '0');
+                    const complementary = `#${pad(r)}${pad(g)}${pad(b)}`;
+                    document.documentElement.style.setProperty('--accent-complementary', complementary);
+                  } catch (e) {
+                    document.documentElement.style.setProperty('--accent-complementary', '#a855f7');
+                  }
+                };
+
+                return (
+                  <div className="relative w-10 h-10 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const picker = document.getElementById('custom-color-picker');
+                        picker?.click();
+                      }}
+                      className={`w-full h-full rounded-full border-2 transition-all active:scale-90 flex items-center justify-center ${
+                        !isPreset 
+                          ? 'border-white scale-110 shadow-[0_0_15px_var(--accent)] bg-accent' 
+                          : 'border-white/10 hover:border-white/30 bg-gradient-to-tr from-red-500 via-green-500 to-blue-500'
+                      }`}
+                      style={{ 
+                        backgroundColor: !isPreset ? customColorVal : undefined
+                      }}
+                      title="Colore Personalizzato"
+                    >
+                      <span className={`text-xs font-black select-none ${!isPreset ? 'text-black mix-blend-difference' : 'text-white'}`}>+</span>
+                    </button>
+                    <input
+                      id="custom-color-picker"
+                      type="color"
+                      value={customColorVal}
+                      onChange={(e) => updateThemeColor(e.target.value)}
+                      className="absolute inset-0 opacity-0 pointer-events-none w-0 h-0"
+                    />
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

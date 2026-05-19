@@ -14,6 +14,15 @@ export function ProgressView({ sessions, plans, settings, onBack }: ProgressView
   const [selectedPlanId, setSelectedPlanId] = useState<string>(plans[0]?.id || '');
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('');
 
+  const themeColor = settings.themeColor || '#dcfc04';
+  const tooltipBorderColor = useMemo(() => {
+    const hex = themeColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16) || 0;
+    const g = parseInt(hex.substring(2, 4), 16) || 0;
+    const b = parseInt(hex.substring(4, 6), 16) || 0;
+    return `rgba(${r}, ${g}, ${b}, 0.2)`;
+  }, [themeColor]);
+
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
   const exerciseType = selectedPlan?.exercises.find(e => e.id === selectedExerciseId)?.type;
   const isCardio = exerciseType === 'cardio';
@@ -168,10 +177,10 @@ export function ProgressView({ sessions, plans, settings, onBack }: ProgressView
                     <XAxis dataKey="date" stroke="rgba(255,255,255,0.4)" fontSize={10} tickMargin={10} axisLine={false} tickLine={false} />
                     <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} axisLine={false} tickLine={false} tickFormatter={(val) => `${val}`} width={30} />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#151619', border: '1px solid rgba(220,252,4,0.2)', borderRadius: '8px' }}
-                      itemStyle={{ color: '#dcfc04' }}
+                      contentStyle={{ backgroundColor: '#151619', border: `1px solid ${tooltipBorderColor}`, borderRadius: '8px' }}
+                      itemStyle={{ color: themeColor }}
                     />
-                    <Line type="monotone" dataKey="metric1" name={metric1Title} stroke="#dcfc04" strokeWidth={3} dot={{ fill: '#0c0d0e', stroke: '#dcfc04', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="metric1" name={metric1Title} stroke={themeColor} strokeWidth={3} dot={{ fill: '#0c0d0e', stroke: themeColor, strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -189,11 +198,11 @@ export function ProgressView({ sessions, plans, settings, onBack }: ProgressView
                     <XAxis dataKey="date" stroke="rgba(255,255,255,0.4)" fontSize={10} tickMargin={10} axisLine={false} tickLine={false} />
                     <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} axisLine={false} tickLine={false} width={40} />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#151619', border: '1px solid rgba(220,252,4,0.2)', borderRadius: '8px' }}
-                      itemStyle={{ color: '#dcfc04' }}
+                      contentStyle={{ backgroundColor: '#151619', border: `1px solid ${tooltipBorderColor}`, borderRadius: '8px' }}
+                      itemStyle={{ color: themeColor }}
                       cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                     />
-                    <Bar dataKey="metric2" name={metric2Title} fill="#dcfc04" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="metric2" name={metric2Title} fill={themeColor} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

@@ -147,7 +147,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
 
   return (
     <div className="flex flex-col space-y-8 animate-in fade-in duration-300 pb-12">
-      <header className="flex items-center justify-between sticky top-0 bg-[#0c0d0e]/95 backdrop-blur-md z-10 py-4 border-b border-white/10 px-1">
+      <header className="flex items-center justify-between sticky top-0 bg-[#0c0d0e]/95 backdrop-blur-md z-40 py-4 border-b border-white/10 px-1">
         <div className="flex items-center space-x-4">
           <button onClick={onCancel} className="btn-icon">
             <ArrowLeft size={20} />
