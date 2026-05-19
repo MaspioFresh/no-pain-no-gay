@@ -1261,7 +1261,10 @@ export function WorkoutSessionLogger({
                                   <button
                                     type="button"
                                     onClick={() => updateSet(exIdx, setIdx, 'unit', (exercise.type === 'cardio' ? (set.unit === 'km' ? 'm' : 'km') : (set.unit === 'kg' ? 'lb' : 'kg')) as any)}
-                                    className="w-8 h-[38px] flex items-center justify-center font-mono text-[9px] font-black rounded border flex-shrink-0 bg-accent/10 border-accent/20 text-accent hover:bg-accent/20 transition-all uppercase"
+                                    className={`w-8 h-[38px] flex items-center justify-center text-[9px] font-black rounded-lg uppercase border transition-all active:scale-95 flex-shrink-0 ${(exercise.type === 'cardio' ? set.unit !== 'm' : set.unit !== 'lb')
+                                       ? 'bg-accent text-[#0c0d0e] border-accent shadow-[0_0_3px_var(--accent)]'
+                                       : 'bg-[var(--accent-complementary)] text-[#0c0d0e] border-[var(--accent-complementary)] shadow-[0_0_3px_var(--accent-complementary)]'
+                                       }`}
                                   >
                                     {exercise.type === 'cardio' ? (set.unit === 'km' || set.unit === 'm' ? set.unit : 'km') : (set.unit === 'kg' || set.unit === 'lb' ? set.unit : 'kg')}
                                   </button>
