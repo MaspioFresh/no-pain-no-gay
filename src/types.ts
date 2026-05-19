@@ -3,6 +3,8 @@ export type ExerciseType = 'barbell' | 'dumbbell' | 'machine' | 'plateLoaded' | 
 
 export interface PlanSet {
   reps?: number;
+  minReps?: number;
+  maxReps?: number;
   weight?: number;
   timeSeconds?: number;
   distance?: number;

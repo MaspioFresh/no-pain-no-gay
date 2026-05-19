@@ -90,6 +90,8 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
           ...ex,
           targetSets: [...ex.targetSets, {
             reps: lastSet?.reps || 0,
+            minReps: lastSet?.minReps,
+            maxReps: lastSet?.maxReps,
             weight: lastSet?.weight,
             timeSeconds: lastSet?.timeSeconds,
             distance: lastSet?.distance
@@ -341,13 +343,39 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
                                       />
                                       <div className="flex items-center space-x-1 flex-shrink-0">
                                         {!set.isMaxReps && (
-                                          <input
-                                            type="number"
-                                            value={set.reps || ''}
-                                            onChange={(e) => updateTargetSet(exercise.id, sIdx, 'reps', parseInt(e.target.value))}
-                                            placeholder="Rip"
-                                            className="input-number-small w-14"
-                                          />
+                                          <div className="flex items-center space-x-1">
+                                            <input
+                                              type="number"
+                                              value={set.minReps !== undefined ? set.minReps : (set.reps || '')}
+                                              onChange={(e) => {
+                                                const val = e.target.value === '' ? undefined : parseInt(e.target.value);
+                                                updateTargetSet(exercise.id, sIdx, 'minReps', val);
+                                                if (val === undefined && set.maxReps === undefined) {
+                                                  updateTargetSet(exercise.id, sIdx, 'reps', undefined);
+                                                } else if (val !== undefined && set.maxReps === undefined) {
+                                                  updateTargetSet(exercise.id, sIdx, 'reps', val);
+                                                } else if (val !== undefined && set.maxReps !== undefined) {
+                                                  updateTargetSet(exercise.id, sIdx, 'reps', val);
+                                                }
+                                              }}
+                                              placeholder="Min"
+                                              className="input-number-small w-10 text-center"
+                                            />
+                                            <span className="text-white/30 text-[10px]">-</span>
+                                            <input
+                                              type="number"
+                                              value={set.maxReps !== undefined ? set.maxReps : ''}
+                                              onChange={(e) => {
+                                                const val = e.target.value === '' ? undefined : parseInt(e.target.value);
+                                                updateTargetSet(exercise.id, sIdx, 'maxReps', val);
+                                                if (val !== undefined && (set.minReps === undefined && set.reps === undefined)) {
+                                                  updateTargetSet(exercise.id, sIdx, 'reps', val);
+                                                }
+                                              }}
+                                              placeholder="Max"
+                                              className="input-number-small w-10 text-center"
+                                            />
+                                          </div>
                                         )}
                                         <button
                                           type="button"
