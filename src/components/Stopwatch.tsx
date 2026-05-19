@@ -11,6 +11,8 @@ interface StopwatchProps {
 export function Stopwatch({ onLap, compact, startTime }: StopwatchProps) {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
+  const startTimeRef = React.useRef<number | null>(null);
+  const accumulatedTimeRef = React.useRef<number>(0);
 
   // Sync with startTime if provided for persistence
   useEffect(() => {
@@ -22,23 +24,48 @@ export function Stopwatch({ onLap, compact, startTime }: StopwatchProps) {
     }
   }, [startTime]);
 
+  // Sync manual stopwatch when page visibility changes (wakes up from screen off)
+  useEffect(() => {
+    if (startTime) return;
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isRunning && startTimeRef.current !== null) {
+        setTime(accumulatedTimeRef.current + (Date.now() - startTimeRef.current));
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isRunning, startTime]);
+
   // Manual stopwatch logic (only if NO startTime)
   useEffect(() => {
     if (startTime) return;
     
     let interval: any;
     if (isRunning) {
+      startTimeRef.current = Date.now();
       interval = setInterval(() => {
-        setTime(prev => prev + 100);
+        if (startTimeRef.current !== null) {
+          setTime(accumulatedTimeRef.current + (Date.now() - startTimeRef.current));
+        }
       }, 100);
     }
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (isRunning && startTimeRef.current !== null) {
+        accumulatedTimeRef.current += Date.now() - startTimeRef.current;
+        startTimeRef.current = null;
+      }
+    };
   }, [isRunning, startTime]);
 
   const reset = () => {
     if (startTime) return; 
     setTime(0);
     setIsRunning(false);
+    accumulatedTimeRef.current = 0;
+    startTimeRef.current = null;
   };
 
   const toggle = () => {

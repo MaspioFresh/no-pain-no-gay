@@ -14,20 +14,49 @@ const generateId = () => {
 
 export function RestTimer({
   initialSeconds,
+  endTime,
   onReset,
   isMinimized,
-  onToggleMinimize
+  onToggleMinimize,
+  onAdjustTime
 }: {
   initialSeconds: number;
+  endTime: number;
   onReset: () => void;
   isMinimized: boolean;
   onToggleMinimize: (minimized: boolean) => void;
+  onAdjustTime: (newEndTime: number) => void;
 }) {
-  const [timeLeft, setTimeLeft] = useState(initialSeconds * 1000);
+  const [timeLeft, setTimeLeft] = useState(Math.max(0, endTime - Date.now()));
   const [isFinished, setIsFinished] = useState(false);
 
   const soundPlayedRef = React.useRef(false);
   const audioCtxRef = React.useRef<AudioContext | null>(null);
+
+  // Sincronizza lo stato se l'endTime fornito dal genitore cambia
+  React.useEffect(() => {
+    const remaining = Math.max(0, endTime - Date.now());
+    setTimeLeft(remaining);
+    if (remaining > 0) {
+      setIsFinished(false);
+      soundPlayedRef.current = false;
+      stopAudio();
+    }
+  }, [endTime]);
+
+  // Sincronizza il timer quando l'app torna visibile (es. risveglio dello schermo)
+  React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const remaining = Math.max(0, endTime - Date.now());
+        setTimeLeft(remaining);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [endTime]);
 
   // Funzione per fermare immediatamente l'audio
   const stopAudio = () => {
@@ -47,6 +76,34 @@ export function RestTimer({
       setIsFinished(true);
       if (!soundPlayedRef.current) {
         soundPlayedRef.current = true;
+
+        // Invia notifica di sistema
+        try {
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            const iconUrl = new URL('/no-pain-no-gay/pwa-192x192.png', window.location.origin).href;
+            const title = 'No Pain No Gay';
+            const options = {
+              body: 'Recupero completato! Prossima serie.',
+              icon: iconUrl,
+              tag: 'rest-timer',
+              renotify: true,
+              silent: true // L'app produce già il suo segnale acustico
+            };
+
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.ready.then(registration => {
+                registration.showNotification(title, options);
+              }).catch(() => {
+                new Notification(title, options);
+              });
+            } else {
+              new Notification(title, options);
+            }
+          }
+        } catch (e) {
+          console.error('Notification failed', e);
+        }
+
         // Play alert sound
         try {
           const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -89,10 +146,10 @@ export function RestTimer({
     }
 
     const interval = setInterval(() => {
-      setTimeLeft(prev => Math.max(0, prev - 100));
+      setTimeLeft(Math.max(0, endTime - Date.now()));
     }, 100);
     return () => clearInterval(interval);
-  }, [timeLeft]);
+  }, [timeLeft, endTime]);
 
   const formatTime = (ms: number) => {
     const s = Math.ceil(ms / 1000);
@@ -102,15 +159,8 @@ export function RestTimer({
   };
 
   const adjustTime = (delta: number) => {
-    setTimeLeft(prev => {
-      const newVal = Math.max(0, prev + delta * 1000);
-      if (newVal > 0) {
-        setIsFinished(false);
-        soundPlayedRef.current = false;
-        stopAudio(); // Interrompe il suono se si aggiunge tempo
-      }
-      return newVal;
-    });
+    const newEndTime = endTime + delta * 1000;
+    onAdjustTime(newEndTime);
   };
 
   const handleClose = () => {
@@ -239,14 +289,40 @@ export function WorkoutSessionLogger({
   plateLoadedMode = 'total',
   defaultFocusMode = false
 }: WorkoutSessionLoggerProps) {
+  const REST_TIMER_STORAGE_KEY = 'workout_rest_timer';
+
   const [restTimerActive, setRestTimerActive] = useState(false);
   const [isRestTimerMinimized, setIsRestTimerMinimized] = useState(false);
   const [currentRestSeconds, setCurrentRestSeconds] = useState(60);
+  const [restTimerEndTime, setRestTimerEndTime] = useState<number | null>(null);
   const [focusMode, setFocusMode] = useState(defaultFocusMode);
   const [currentFocusIndex, setCurrentFocusIndex] = useState(0);
   const [editingPlanExId, setEditingPlanExId] = useState<string | null>(null);
   const [editingPlanExNotes, setEditingPlanExNotes] = useState('');
   const initializedFocusIdx = useRef(false);
+
+  // Ripristina lo stato del timer di recupero da localStorage all'avvio
+  useEffect(() => {
+    const saved = localStorage.getItem(REST_TIMER_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.endTime === 'number') {
+          // Ripristina il timer solo se non è scaduto da più di 10 minuti
+          if (Date.now() - parsed.endTime < 10 * 60 * 1000) {
+            setCurrentRestSeconds(parsed.initialSeconds || 60);
+            setIsRestTimerMinimized(parsed.isMinimized || false);
+            setRestTimerEndTime(parsed.endTime);
+            setRestTimerActive(true);
+          } else {
+            localStorage.removeItem(REST_TIMER_STORAGE_KEY);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse rest timer', e);
+      }
+    }
+  }, []);
 
   const updateBarbell = (exerciseIndex: number, weight: number) => {
     const newSessions = [...exerciseSessions];
@@ -305,10 +381,45 @@ export function WorkoutSessionLogger({
   };
 
   const triggerRestTimer = (seconds: number) => {
+    const targetEndTime = Date.now() + seconds * 1000;
     setCurrentRestSeconds(seconds);
+    setRestTimerEndTime(targetEndTime);
     setRestTimerActive(false);
     setIsRestTimerMinimized(false);
+
+    localStorage.setItem(REST_TIMER_STORAGE_KEY, JSON.stringify({
+      endTime: targetEndTime,
+      initialSeconds: seconds,
+      isMinimized: false
+    }));
+
     setTimeout(() => setRestTimerActive(true), 10);
+  };
+
+  const handleToggleMinimize = (minimized: boolean) => {
+    setIsRestTimerMinimized(minimized);
+    if (restTimerEndTime !== null) {
+      localStorage.setItem(REST_TIMER_STORAGE_KEY, JSON.stringify({
+        endTime: restTimerEndTime,
+        initialSeconds: currentRestSeconds,
+        isMinimized: minimized
+      }));
+    }
+  };
+
+  const handleAdjustRestTime = (newEndTime: number) => {
+    setRestTimerEndTime(newEndTime);
+    localStorage.setItem(REST_TIMER_STORAGE_KEY, JSON.stringify({
+      endTime: newEndTime,
+      initialSeconds: currentRestSeconds,
+      isMinimized: isRestTimerMinimized
+    }));
+  };
+
+  const handleResetRestTimer = () => {
+    setRestTimerActive(false);
+    setRestTimerEndTime(null);
+    localStorage.removeItem(REST_TIMER_STORAGE_KEY);
   };
 
   const handleSetCheckToggle = (exIdx: number, setIdx: number) => {
@@ -334,7 +445,7 @@ export function WorkoutSessionLogger({
                 timerTriggered = true;
                 break;
               } else if (s.setMode === 'dropSet') {
-                setRestTimerActive(false);
+                handleResetRestTimer();
                 timerTriggered = true;
                 break;
               }
@@ -370,7 +481,7 @@ export function WorkoutSessionLogger({
         if (set.setMode === 'restPause') {
           triggerRestTimer(set.restPauseSeconds || 20);
         } else {
-          setRestTimerActive(false);
+          handleResetRestTimer();
         }
       }
     }
@@ -440,10 +551,7 @@ export function WorkoutSessionLogger({
 
     if (targetState) {
       const maxRest = Math.max(...exerciseIndices.map(idx => plan.exercises[idx]?.restSeconds || 60));
-      setCurrentRestSeconds(maxRest);
-      setRestTimerActive(false);
-      setIsRestTimerMinimized(false);
-      setTimeout(() => setRestTimerActive(true), 10);
+      triggerRestTimer(maxRest);
     }
   };
 
@@ -462,6 +570,7 @@ export function WorkoutSessionLogger({
       exercises: exerciseSessions,
       unitAtTime: unit
     };
+    localStorage.removeItem(REST_TIMER_STORAGE_KEY);
     onSave(session);
   };
 
@@ -510,12 +619,14 @@ export function WorkoutSessionLogger({
       </div>
 
       <AnimatePresence>
-        {restTimerActive && (
+        {restTimerActive && restTimerEndTime !== null && (
           <RestTimer
             initialSeconds={currentRestSeconds}
-            onReset={() => setRestTimerActive(false)}
+            endTime={restTimerEndTime}
+            onReset={handleResetRestTimer}
             isMinimized={isRestTimerMinimized}
-            onToggleMinimize={setIsRestTimerMinimized}
+            onToggleMinimize={handleToggleMinimize}
+            onAdjustTime={handleAdjustRestTime}
           />
         )}
       </AnimatePresence>

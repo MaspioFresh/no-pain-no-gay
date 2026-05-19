@@ -77,6 +77,11 @@ export default function App() {
   }, [activePlan, activeSessionLogs, startTime]);
 
   const handleStartPlan = (plan: WorkoutPlan) => {
+    // Richiede il permesso per le notifiche all'inizio dell'allenamento
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+
     setActivePlan(plan);
     setActiveSessionLogs((plan.exercises || []).map(ex => ({
       exerciseId: ex.id,
@@ -261,6 +266,7 @@ export default function App() {
                 'Sei sicuro? I progressi non salvati andranno persi.',
                 () => {
                   localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+                  localStorage.removeItem('workout_rest_timer');
                   setActivePlan(null);
                   setActiveSessionLogs([]);
                   setStartTime(null);

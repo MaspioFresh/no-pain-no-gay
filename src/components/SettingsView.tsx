@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppData, AppSettings } from '../types';
-import { Download, Upload, Trash2, ArrowLeft, FileJson, Palette, Weight, Scale, ScanLine } from 'lucide-react';
+import { Download, Upload, Trash2, ArrowLeft, FileJson, Palette, Weight, Scale, ScanLine, Bell } from 'lucide-react';
 import { Modal, useModal } from './Modal';
 
 interface SettingsViewProps {
@@ -22,6 +22,52 @@ const THEME_COLORS = [
 export function SettingsView({ data, onImport, onUpdateSettings, onBack }: SettingsViewProps) {
   const settings = data.settings;
   const { modalState, closeModal, showAlert, showConfirm } = useModal();
+
+  const [notificationPermission, setNotificationPermission] = React.useState<NotificationPermission>(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'denied'
+  );
+
+  const requestNotificationPermission = () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+        if (permission === 'granted') {
+          try {
+            const iconUrl = new URL('/no-pain-no-gay/pwa-192x192.png', window.location.origin).href;
+            new Notification('No Pain No Gay', {
+              body: 'Notifiche attivate con successo!',
+              icon: iconUrl
+            });
+          } catch (e) {
+            console.error('Notification constructor failed, using fallback', e);
+          }
+        }
+      });
+    }
+  };
+
+  const testNotification = () => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      const iconUrl = new URL('/no-pain-no-gay/pwa-192x192.png', window.location.origin).href;
+      const title = 'No Pain No Gay';
+      const options = {
+        body: 'Questo è un test delle notifiche del timer!',
+        icon: iconUrl,
+        tag: 'rest-timer',
+        renotify: true
+      };
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification(title, options);
+        }).catch(() => {
+          new Notification(title, options);
+        });
+      } else {
+        new Notification(title, options);
+      }
+    }
+  };
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -221,6 +267,47 @@ export function SettingsView({ data, onImport, onUpdateSettings, onBack }: Setti
               <p className="text-[10px] text-white/40 leading-relaxed">
                 Se attivo, gli allenamenti inizieranno mostrando un solo esercizio alla volta per favorire la concentrazione.
               </p>
+            </div>
+
+            {/* Notifications */}
+            <div className="space-y-3 pt-4 border-t border-white/5">
+              <label className="text-sm font-bold text-white/80 flex items-center space-x-2">
+                <Bell size={16} className="text-accent" />
+                <span>Notifiche del Timer</span>
+              </label>
+              {typeof window !== 'undefined' && 'Notification' in window ? (
+                <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl">
+                  <div className="text-xs text-white/60">
+                    Stato: {notificationPermission === 'granted' ? (
+                      <span className="text-green-400 font-bold">Attive</span>
+                    ) : notificationPermission === 'denied' ? (
+                      <span className="text-red-400 font-bold">Bloccate (controlla le impostazioni del browser)</span>
+                    ) : (
+                      <span>Non autorizzate</span>
+                    )}
+                  </div>
+                  {notificationPermission !== 'granted' && notificationPermission !== 'denied' && (
+                    <button
+                      onClick={requestNotificationPermission}
+                      className="px-3 py-1.5 text-xs font-bold bg-accent text-[#0c0d0e] rounded-lg shadow-[0_0_10px_rgba(220,252,4,0.2)] active:scale-95 transition-all cursor-pointer"
+                    >
+                      ATTIVA
+                    </button>
+                  )}
+                  {notificationPermission === 'granted' && (
+                    <button
+                      onClick={testNotification}
+                      className="px-3 py-1.5 text-xs font-bold bg-white/10 text-white rounded-lg active:scale-95 transition-all hover:bg-white/20 cursor-pointer"
+                    >
+                      TEST
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-white/40 leading-relaxed">
+                  Le notifiche non sono supportate da questo browser/dispositivo.
+                </p>
+              )}
             </div>
           </div>
 
