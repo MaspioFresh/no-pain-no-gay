@@ -600,7 +600,7 @@ export function WorkoutSessionLogger({
 
   return (
     <div className={`flex flex-col space-y-6 pb-32 ${focusMode ? 'pb-48' : ''}`}>
-      <div className="sticky top-0 bg-[#0c0d0e]/95 backdrop-blur-lg z-20 border-b border-white/10 px-1">
+      <div className="sticky top-0 bg-[#0c0d0e]/95 backdrop-blur-lg z-40 border-b border-white/10 px-1">
         {/* Row 1: title + buttons */}
         <div className="flex items-center justify-between py-3 gap-4">
           <div className="flex items-center space-x-3 min-w-0">
