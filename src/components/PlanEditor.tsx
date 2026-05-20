@@ -398,30 +398,52 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
                                   )}
                                   {exercise.type === 'time' && (
                                     <>
-                                      <div className="flex w-full space-x-1">
-                                        <input
-                                          type="number"
-                                          value={Math.floor((set.timeSeconds || 0) / 60) || ''}
-                                          onChange={(e) => {
-                                            const m = parseInt(e.target.value) || 0;
-                                            const s = (set.timeSeconds || 0) % 60;
-                                            updateTargetSet(exercise.id, sIdx, 'timeSeconds', m * 60 + s);
+                                      <div className="flex w-full space-x-1 items-center">
+                                        {!set.isMaxReps ? (
+                                          <>
+                                            <input
+                                              type="number"
+                                              value={Math.floor((set.timeSeconds || 0) / 60) || ''}
+                                              onChange={(e) => {
+                                                const m = parseInt(e.target.value) || 0;
+                                                const s = (set.timeSeconds || 0) % 60;
+                                                updateTargetSet(exercise.id, sIdx, 'timeSeconds', m * 60 + s);
+                                              }}
+                                              placeholder="min"
+                                              className="input-number-small px-1"
+                                            />
+                                            <span className="text-white/30 self-center">:</span>
+                                            <input
+                                              type="number"
+                                              value={(set.timeSeconds || 0) % 60 || ''}
+                                              onChange={(e) => {
+                                                const s = parseInt(e.target.value) || 0;
+                                                const m = Math.floor((set.timeSeconds || 0) / 60);
+                                                updateTargetSet(exercise.id, sIdx, 'timeSeconds', m * 60 + s);
+                                              }}
+                                              placeholder="sec"
+                                              className="input-number-small px-1"
+                                            />
+                                          </>
+                                        ) : (
+                                          <span className="text-accent font-black text-[9px] px-2 py-1.5 bg-accent/10 border border-accent/20 rounded font-mono uppercase tracking-wider flex-1 text-center">Tempo MAX</span>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const nextVal = !set.isMaxReps;
+                                            updateTargetSet(exercise.id, sIdx, 'isMaxReps', nextVal);
+                                            if (nextVal) {
+                                              updateTargetSet(exercise.id, sIdx, 'timeSeconds', 0);
+                                            }
                                           }}
-                                          placeholder="min"
-                                          className="input-number-small px-1"
-                                        />
-                                        <span className="text-white/30 self-center">:</span>
-                                        <input
-                                          type="number"
-                                          value={(set.timeSeconds || 0) % 60 || ''}
-                                          onChange={(e) => {
-                                            const s = parseInt(e.target.value) || 0;
-                                            const m = Math.floor((set.timeSeconds || 0) / 60);
-                                            updateTargetSet(exercise.id, sIdx, 'timeSeconds', m * 60 + s);
-                                          }}
-                                          placeholder="sec"
-                                          className="input-number-small px-1"
-                                        />
+                                          className={`text-[8px] font-black px-1.5 py-1 rounded transition-all uppercase border flex-shrink-0 ${set.isMaxReps
+                                            ? 'border-accent bg-accent text-[#0c0d0e] font-bold shadow-[0_0_8px_rgba(220,252,4,0.4)]'
+                                            : 'border-white/10 text-white/40 hover:border-white/20 hover:text-white'
+                                            }`}
+                                        >
+                                          MAX
+                                        </button>
                                       </div>
                                       <input
                                         type="number"

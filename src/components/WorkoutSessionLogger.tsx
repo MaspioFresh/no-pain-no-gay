@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ExerciseSession, SetEntry, WorkoutPlan, WorkoutSession, WeightUnit, PlanSet } from '../types';
-import { Plus, Minus, Check, Save, X, History as HistoryIcon, Dumbbell, ArrowLeft, Timer, RotateCcw, MoveRight, ScanLine, ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
+import { Plus, Minus, Check, Save, X, History as HistoryIcon, Dumbbell, ArrowLeft, Timer, RotateCcw, MoveRight, ScanLine, ChevronLeft, ChevronRight, Edit2, Play, Pause } from 'lucide-react';
 import { motion, AnimatePresence, useAnimation, useMotionValue, animate } from 'motion/react';
 import { Stopwatch } from './Stopwatch';
 import { Modal } from './Modal';
@@ -21,6 +21,27 @@ const getTargetRepsLabel = (targetSet: PlanSet | undefined) => {
   if (targetSet.minReps !== undefined) return `${targetSet.minReps}`;
   if (targetSet.maxReps !== undefined) return `${targetSet.maxReps}`;
   return targetSet.reps ? `${targetSet.reps}` : '';
+};
+
+const getTargetLabel = (targetSet: PlanSet | undefined, exerciseType?: string) => {
+  if (!targetSet) return '';
+  if (targetSet.isMaxReps) return 'MAX';
+  if (exerciseType === 'time') {
+    if (targetSet.timeSeconds !== undefined && targetSet.timeSeconds > 0) {
+      const m = Math.floor(targetSet.timeSeconds / 60);
+      const s = targetSet.timeSeconds % 60;
+      if (m > 0) {
+        return `${m}:${s.toString().padStart(2, '0')}`;
+      }
+      return `${s}s`;
+    }
+  }
+  if (exerciseType === 'cardio') {
+    if (targetSet.distance !== undefined && targetSet.distance > 0) {
+      return `${targetSet.distance}`;
+    }
+  }
+  return getTargetRepsLabel(targetSet);
 };
 
 export function RestTimer({
@@ -327,6 +348,14 @@ export function WorkoutSessionLogger({
   const [editingPlanExNotes, setEditingPlanExNotes] = useState('');
   const initializedFocusIdx = useRef(false);
 
+  const [activeSetTimer, setActiveSetTimer] = useState<{
+    exIdx: number;
+    setIdx: number;
+    type: 'timer' | 'stopwatch';
+    startTime: number;
+    initialTimeSeconds: number;
+  } | null>(null);
+
   // Ripristina lo stato del timer di recupero da localStorage all'avvio
   useEffect(() => {
     const saved = localStorage.getItem(REST_TIMER_STORAGE_KEY);
@@ -391,6 +420,131 @@ export function WorkoutSessionLogger({
     };
     setExerciseSessions(newSessions);
   };
+
+  const triggerSetTimerAlert = () => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([100, 50, 100, 50, 100]);
+    }
+    try {
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        const title = 'No Pain No Gay';
+        new Notification(title, {
+          body: 'Tempo esercizio completato!',
+          requireInteraction: false,
+          silent: false
+        });
+      }
+    } catch (e) {
+      console.error('Notification failed', e);
+    }
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(2000, audioCtx.currentTime);
+      const now = audioCtx.currentTime;
+      gainNode.gain.setValueAtTime(0, now);
+      for (let i = 0; i < 3; i++) {
+        const startTime = now + (i * 0.25);
+        gainNode.gain.setValueAtTime(0.2, startTime);
+        gainNode.gain.setValueAtTime(0, startTime + 0.15);
+      }
+      oscillator.start(now);
+      setTimeout(() => {
+        try { oscillator.stop(); } catch (e) {}
+        try { audioCtx.close(); } catch (e) {}
+      }, 1000);
+    } catch (e) {
+      console.error('Audio alert failed', e);
+    }
+  };
+
+  const handleToggleSetTimer = (exIdx: number, setIdx: number) => {
+    const isRunning = activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx;
+    if (isRunning) {
+      setActiveSetTimer(null);
+    } else {
+      const session = exerciseSessions[exIdx];
+      const set = session?.sets[setIdx];
+      const targetSet = plan.exercises[exIdx]?.targetSets?.[setIdx];
+      const hasTarget = targetSet && typeof targetSet.timeSeconds === 'number' && targetSet.timeSeconds > 0 && !targetSet.isMaxReps;
+      
+      let initialTime = set?.timeSeconds || 0;
+      if (initialTime === 0 && hasTarget) {
+        initialTime = targetSet.timeSeconds!;
+        updateSet(exIdx, setIdx, 'timeSeconds', initialTime);
+      }
+      
+      setActiveSetTimer({
+        exIdx,
+        setIdx,
+        type: hasTarget ? 'timer' : 'stopwatch',
+        startTime: Date.now(),
+        initialTimeSeconds: initialTime
+      });
+    }
+  };
+
+  const handleResetSetTimer = (exIdx: number, setIdx: number) => {
+    const isRunning = activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx;
+    if (isRunning) {
+      setActiveSetTimer(null);
+    }
+    updateSet(exIdx, setIdx, 'timeSeconds', 0);
+  };
+
+  useEffect(() => {
+    if (!activeSetTimer) return;
+    
+    const syncTimer = () => {
+      setActiveSetTimer(current => {
+        if (!current) return null;
+        const elapsedMs = Date.now() - current.startTime;
+        const elapsedSeconds = Math.floor(elapsedMs / 1000);
+        
+        let newTime = 0;
+        if (current.type === 'timer') {
+          newTime = Math.max(0, current.initialTimeSeconds - elapsedSeconds);
+        } else {
+          newTime = current.initialTimeSeconds + elapsedSeconds;
+        }
+        
+        setExerciseSessions(prev => {
+          const newSessions = [...prev];
+          if (newSessions[current.exIdx]?.sets[current.setIdx]) {
+            newSessions[current.exIdx].sets[current.setIdx] = {
+              ...newSessions[current.exIdx].sets[current.setIdx],
+              timeSeconds: newTime
+            };
+          }
+          return newSessions;
+        });
+        
+        if (current.type === 'timer' && newTime === 0) {
+          triggerSetTimerAlert();
+          return null;
+        }
+        return current;
+      });
+    };
+
+    const interval = setInterval(syncTimer, 200);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncTimer();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [activeSetTimer, setExerciseSessions]);
 
   const updateSubSet = (exerciseIndex: number, setIndex: number, subSetIndex: number, field: 'reps' | 'weight' | 'completed', value: any) => {
     const newSessions = [...exerciseSessions];
@@ -877,7 +1031,7 @@ export function WorkoutSessionLogger({
                                         {/* Target Reps Badge / Spacer */}
                                         <div className="w-14 flex-shrink-0 flex items-center justify-center h-[38px]">
                                           {(() => {
-                                            const targetRepsLabel = getTargetRepsLabel(targetSet);
+                                            const targetRepsLabel = getTargetLabel(targetSet, exercise.type);
                                             return targetRepsLabel ? (
                                               <span className="w-full h-full flex items-center justify-center text-[11px] font-mono font-black bg-accent text-[#0c0d0e] border border-accent rounded-lg shadow-[0_0_3px_var(--accent)] text-center uppercase" title="Target Reps">
                                                 {targetRepsLabel}
@@ -932,17 +1086,20 @@ export function WorkoutSessionLogger({
                                               />
                                             </div>
                                           ) : exercise.type === 'time' ? (
-                                            <div className="flex w-full space-x-1">
+                                            <div className="flex w-full space-x-1 items-center">
                                               <input
                                                 type="number"
                                                 value={Math.floor((set.timeSeconds || 0) / 60) || ''}
                                                 onChange={(e) => {
                                                   const m = parseInt(e.target.value) || 0;
                                                   const s = (set.timeSeconds || 0) % 60;
+                                                  if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
+                                                    setActiveSetTimer(null);
+                                                  }
                                                   updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
                                                 }}
                                                 placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 60)}` : 'm'}
-                                                className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                                className="w-10 bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                               />
                                               <span className="text-white/30 self-center">:</span>
                                               <input
@@ -951,11 +1108,30 @@ export function WorkoutSessionLogger({
                                                 onChange={(e) => {
                                                   const s = parseInt(e.target.value) || 0;
                                                   const m = Math.floor((set.timeSeconds || 0) / 60);
+                                                  if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
+                                                    setActiveSetTimer(null);
+                                                  }
                                                   updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
                                                 }}
                                                 placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
-                                                className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                                className={`w-10 bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-accent animate-pulse font-bold' : ''}`}
                                               />
+                                              <button
+                                                type="button"
+                                                onClick={() => handleToggleSetTimer(exIdx, setIdx)}
+                                                className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-red-500 bg-red-500/10' : 'text-accent bg-accent/10 hover:bg-accent/20'}`}
+                                                title={activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'Pausa' : 'Avvia'}
+                                              >
+                                                {activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? <Pause size={14} /> : <Play size={14} />}
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleResetSetTimer(exIdx, setIdx)}
+                                                className={`p-1.5 rounded-lg text-white/40 hover:text-white/80 bg-white/5 hover:bg-white/10 transition-all flex-shrink-0 ${(set.timeSeconds || 0) > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                                                title="Resetta"
+                                              >
+                                                <RotateCcw size={12} />
+                                              </button>
                                             </div>
                                           ) : (
                                             <input
@@ -1314,7 +1490,7 @@ export function WorkoutSessionLogger({
                                   {/* Target Reps Badge / Spacer */}
                                   <div className="w-14 flex-shrink-0 flex items-center justify-center h-[38px]">
                                     {(() => {
-                                      const targetRepsLabel = getTargetRepsLabel(targetSet);
+                                      const targetRepsLabel = getTargetLabel(targetSet, exercise.type);
                                       return targetRepsLabel ? (
                                         <span className="w-full h-full flex items-center justify-center text-[11px] font-mono font-black bg-accent text-[#0c0d0e] border border-accent rounded-lg shadow-[0_0_3px_var(--accent)] text-center uppercase" title="Target Reps">
                                           {targetRepsLabel}
@@ -1369,17 +1545,20 @@ export function WorkoutSessionLogger({
                                         />
                                       </div>
                                     ) : exercise.type === 'time' ? (
-                                      <div className="flex w-full space-x-1">
+                                      <div className="flex w-full space-x-1 items-center">
                                         <input
                                           type="number"
                                           value={Math.floor((set.timeSeconds || 0) / 60) || ''}
                                           onChange={(e) => {
                                             const m = parseInt(e.target.value) || 0;
                                             const s = (set.timeSeconds || 0) % 60;
+                                            if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
+                                              setActiveSetTimer(null);
+                                            }
                                             updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
                                           }}
                                           placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 60)}` : 'm'}
-                                          className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                          className="w-10 bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                         />
                                         <span className="text-white/30 self-center">:</span>
                                         <input
@@ -1388,11 +1567,30 @@ export function WorkoutSessionLogger({
                                           onChange={(e) => {
                                             const s = parseInt(e.target.value) || 0;
                                             const m = Math.floor((set.timeSeconds || 0) / 60);
+                                            if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
+                                              setActiveSetTimer(null);
+                                            }
                                             updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
                                           }}
                                           placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
-                                          className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                          className={`w-10 bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-accent animate-pulse font-bold' : ''}`}
                                         />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleSetTimer(exIdx, setIdx)}
+                                          className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-red-500 bg-red-500/10' : 'text-accent bg-accent/10 hover:bg-accent/20'}`}
+                                          title={activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'Pausa' : 'Avvia'}
+                                        >
+                                          {activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? <Pause size={14} /> : <Play size={14} />}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleResetSetTimer(exIdx, setIdx)}
+                                          className={`p-1.5 rounded-lg text-white/40 hover:text-white/80 bg-white/5 hover:bg-white/10 transition-all flex-shrink-0 ${(set.timeSeconds || 0) > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                                          title="Resetta"
+                                        >
+                                          <RotateCcw size={12} />
+                                        </button>
                                       </div>
                                     ) : (
                                       <input

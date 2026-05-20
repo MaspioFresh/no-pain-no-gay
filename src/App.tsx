@@ -18,6 +18,41 @@ import { Modal, useModal } from './components/Modal';
 
 type View = 'dashboard' | 'active-session' | 'history' | 'data' | 'create-plan' | 'view-plan' | 'modify-plan' | 'progress';
 
+const getTargetSetLabel = (s: any, exerciseType?: string) => {
+  if (s.isMaxReps) return 'MAX';
+  if (exerciseType === 'time') {
+    if (s.timeSeconds !== undefined && s.timeSeconds > 0) {
+      const m = Math.floor(s.timeSeconds / 60);
+      const sec = s.timeSeconds % 60;
+      if (m > 0) {
+        return `${m}:${sec.toString().padStart(2, '0')}`;
+      }
+      return `${sec}s`;
+    }
+    return '0s';
+  }
+  if (exerciseType === 'cardio') {
+    if (s.distance !== undefined && s.distance > 0) {
+      return `${s.distance} ${s.unit || 'km'}`;
+    }
+    if (s.timeSeconds !== undefined && s.timeSeconds > 0) {
+      const m = Math.floor(s.timeSeconds / 60);
+      const sec = s.timeSeconds % 60;
+      if (m > 0) {
+        return `${m}:${sec.toString().padStart(2, '0')}`;
+      }
+      return `${sec}s`;
+    }
+    return '';
+  }
+  if (s.minReps !== undefined && s.maxReps !== undefined) {
+    return `${s.minReps}-${s.maxReps} RIP`;
+  }
+  if (s.minReps !== undefined) return `${s.minReps} RIP`;
+  if (s.maxReps !== undefined) return `${s.maxReps} RIP`;
+  return s.reps ? `${s.reps} RIP` : '';
+};
+
 export default function App() {
   const {
     data,
@@ -254,7 +289,7 @@ export default function App() {
                   <div className="flex flex-wrap gap-2">
                     {(ex.targetSets || []).map((s, i) => (
                       <span key={i} className="px-2 py-1 bg-white/5 rounded text-[10px] mono-label">
-                        SET {i + 1}: {s.isMaxReps ? 'MAX' : `${s.reps} RIP`} {s.weight ? `${s.weight}kg` : ''}
+                        SET {i + 1}: {getTargetSetLabel(s, ex.type)} {s.weight ? `${s.weight}kg` : ''}
                       </span>
                     ))}
                   </div>
