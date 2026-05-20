@@ -809,11 +809,22 @@ export function WorkoutSessionLogger({
                                       <div className="flex w-full space-x-1 text-[7px] mono-label text-white/40 uppercase items-center">
                                         <div className="w-8 flex-shrink-0" />
                                         {exercise.type === 'cardio' ? (
-                                          <><div className="flex-1 text-center">DIST</div><div className="w-10 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
+                                          <><div className="flex-1 text-center">DIST</div><div className="w-14 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
                                         ) : exercise.type === 'time' ? (
-                                          <><div className="flex-1 text-center">PESO</div><div className="w-10 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
+                                          <><div className="flex-1 text-center">PESO</div><div className="w-14 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
                                         ) : (
-                                          <><div className="flex-1 text-center">{isPerSide ? 'P.LATO' : 'PESO'}</div><div className="w-10 flex-shrink-0" /><div className="flex-1 text-center">REPS</div></>
+                                          <>
+                                            <div className="flex-1 text-center flex items-center justify-center gap-1">
+                                              <span>{isPerSide ? 'P.LATO' : 'PESO'}</span>
+                                              {!isPerSide && platesPerSide > 0 && (!exercise.type || exercise.type === 'barbell' || exercise.type === 'plateLoaded') && (
+                                                <span className="text-[7px] font-mono text-accent/50 normal-case">
+                                                  ({exercise.type === 'plateLoaded' ? (rawWeight / 2).toFixed(1) : platesPerSide.toFixed(1)}/lato)
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="w-14 flex-shrink-0" />
+                                            <div className="flex-1 text-center">REPS</div>
+                                          </>
                                         )}
                                         <div className="w-10 flex-shrink-0" />
                                       </div>
@@ -858,18 +869,13 @@ export function WorkoutSessionLogger({
                                                   placeholder={weightPlaceholder}
                                                   className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                                 />
-                                                {!isPerSide && platesPerSide > 0 && (!exercise.type || exercise.type === 'barbell' || exercise.type === 'plateLoaded') && (
-                                                  <span className="text-[7px] font-mono text-accent/40 text-center uppercase tracking-tighter block mt-0.5">
-                                                    {exercise.type === 'plateLoaded' ? (rawWeight / 2).toFixed(1) : platesPerSide.toFixed(1)}/lato
-                                                  </span>
-                                                )}
                                               </>
                                             )}
                                           </div>
                                         </div>
 
                                         {/* Target Reps Badge / Spacer */}
-                                        <div className="w-10 flex-shrink-0 flex items-center justify-center h-[38px]">
+                                        <div className="w-14 flex-shrink-0 flex items-center justify-center h-[38px]">
                                           {(() => {
                                             const targetRepsLabel = getTargetRepsLabel(targetSet);
                                             return targetRepsLabel ? (
@@ -1248,11 +1254,22 @@ export function WorkoutSessionLogger({
                                 <div className="flex w-full space-x-1 text-[7px] mono-label text-white/40 uppercase items-center">
                                   <div className="w-8 flex-shrink-0" />
                                   {exercise.type === 'cardio' ? (
-                                    <><div className="flex-1 text-center">DIST</div><div className="w-10 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
+                                    <><div className="flex-1 text-center">DIST</div><div className="w-14 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
                                   ) : exercise.type === 'time' ? (
-                                    <><div className="flex-1 text-center">PESO</div><div className="w-10 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
+                                    <><div className="flex-1 text-center">PESO</div><div className="w-14 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
                                   ) : (
-                                    <><div className="flex-1 text-center">{isPerSide ? 'P.LATO' : 'PESO'}</div><div className="w-10 flex-shrink-0" /><div className="flex-1 text-center">REPS</div></>
+                                    <>
+                                      <div className="flex-1 text-center flex items-center justify-center gap-1">
+                                        <span>{isPerSide ? 'P.LATO' : 'PESO'}</span>
+                                        {!isPerSide && platesPerSide > 0 && (!exercise.type || exercise.type === 'barbell' || exercise.type === 'plateLoaded') && (
+                                          <span className="text-[7px] font-mono text-accent/50 normal-case">
+                                            ({exercise.type === 'plateLoaded' ? (rawWeight / 2).toFixed(1) : platesPerSide.toFixed(1)}/lato)
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="w-14 flex-shrink-0" />
+                                      <div className="flex-1 text-center">REPS</div>
+                                    </>
                                   )}
                                   <div className="w-10 flex-shrink-0" />
                                 </div>
@@ -1289,18 +1306,13 @@ export function WorkoutSessionLogger({
                                             placeholder={weightPlaceholder}
                                             className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                           />
-                                          {!isPerSide && platesPerSide > 0 && (!exercise.type || exercise.type === 'barbell' || exercise.type === 'plateLoaded') && (
-                                            <span className="text-[7px] font-mono text-accent/40 text-center uppercase tracking-tighter block mt-0.5">
-                                              {exercise.type === 'plateLoaded' ? (rawWeight / 2).toFixed(1) : platesPerSide.toFixed(1)}/lato
-                                            </span>
-                                          )}
                                         </>
                                       )}
                                     </div>
                                   </div>
 
                                   {/* Target Reps Badge / Spacer */}
-                                  <div className="w-10 flex-shrink-0 flex items-center justify-center h-[38px]">
+                                  <div className="w-14 flex-shrink-0 flex items-center justify-center h-[38px]">
                                     {(() => {
                                       const targetRepsLabel = getTargetRepsLabel(targetSet);
                                       return targetRepsLabel ? (
