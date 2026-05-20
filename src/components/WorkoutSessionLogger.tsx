@@ -525,6 +525,16 @@ export function WorkoutSessionLogger({
         
         if (current.type === 'timer' && newTime === 0) {
           triggerSetTimerAlert();
+          setExerciseSessions(prev => {
+            const newSessions = [...prev];
+            if (newSessions[current.exIdx]?.sets[current.setIdx]) {
+              newSessions[current.exIdx].sets[current.setIdx] = {
+                ...newSessions[current.exIdx].sets[current.setIdx],
+                timeSeconds: current.initialTimeSeconds
+              };
+            }
+            return newSessions;
+          });
           return null;
         }
         return current;
@@ -964,8 +974,8 @@ export function WorkoutSessionLogger({
                                         <div className="w-8 flex-shrink-0" />
                                         {exercise.type === 'cardio' ? (
                                           <><div className="flex-1 text-center">DIST</div><div className="w-14 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
-                                        ) : exercise.type === 'time' ? (
-                                          <><div className="flex-1 text-center">PESO</div><div className="w-14 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
+                                                                                 ) : exercise.type === 'time' ? (
+                                           <><div className="flex-1 text-center">PESO</div><div className="w-14 flex-shrink-0" /><div className="flex-shrink-0 w-[106px] text-center">TEMPO</div></>
                                         ) : (
                                           <>
                                             <div className="flex-1 text-center flex items-center justify-center gap-1">
@@ -996,7 +1006,7 @@ export function WorkoutSessionLogger({
                                         </button>
 
                                         {/* Left Input (Weight / Distance) */}
-                                        <div className="flex-1">
+                                        <div className={exercise.type === 'time' ? "flex-1 min-w-[70px]" : "flex-1"}>
                                           <div className="flex flex-col space-y-1">
                                             {exercise.type === 'cardio' ? (
                                               <input
@@ -1043,7 +1053,7 @@ export function WorkoutSessionLogger({
                                         </div>
 
                                         {/* Right Input (Reps / Time) */}
-                                        <div className="flex-1">
+                                        <div className={exercise.type === 'time' ? "flex-shrink-0 w-[106px]" : "flex-1"}>
                                           {exercise.type === 'cardio' ? (
                                             <div className="flex w-full space-x-1">
                                               <input
@@ -1085,54 +1095,54 @@ export function WorkoutSessionLogger({
                                                 className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                               />
                                             </div>
-                                          ) : exercise.type === 'time' ? (
-                                            <div className="flex w-full space-x-1 items-center">
-                                              <input
-                                                type="number"
-                                                value={Math.floor((set.timeSeconds || 0) / 60) || ''}
-                                                onChange={(e) => {
-                                                  const m = parseInt(e.target.value) || 0;
-                                                  const s = (set.timeSeconds || 0) % 60;
-                                                  if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
-                                                    setActiveSetTimer(null);
-                                                  }
-                                                  updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
-                                                }}
-                                                placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 60)}` : 'm'}
-                                                className="w-10 bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
-                                              />
-                                              <span className="text-white/30 self-center">:</span>
-                                              <input
-                                                type="number"
-                                                value={(set.timeSeconds || 0) % 60 || ''}
-                                                onChange={(e) => {
-                                                  const s = parseInt(e.target.value) || 0;
-                                                  const m = Math.floor((set.timeSeconds || 0) / 60);
-                                                  if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
-                                                    setActiveSetTimer(null);
-                                                  }
-                                                  updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
-                                                }}
-                                                placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
-                                                className={`w-10 bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-accent animate-pulse font-bold' : ''}`}
-                                              />
-                                              <button
-                                                type="button"
-                                                onClick={() => handleToggleSetTimer(exIdx, setIdx)}
-                                                className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-red-500 bg-red-500/10' : 'text-accent bg-accent/10 hover:bg-accent/20'}`}
-                                                title={activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'Pausa' : 'Avvia'}
-                                              >
-                                                {activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? <Pause size={14} /> : <Play size={14} />}
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => handleResetSetTimer(exIdx, setIdx)}
-                                                className={`p-1.5 rounded-lg text-white/40 hover:text-white/80 bg-white/5 hover:bg-white/10 transition-all flex-shrink-0 ${(set.timeSeconds || 0) > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                                                title="Resetta"
-                                              >
-                                                <RotateCcw size={12} />
-                                              </button>
-                                            </div>
+                                                                                      ) : exercise.type === 'time' ? (
+                                              <div className="flex w-full space-x-0.5 items-center justify-end">
+                                                <input
+                                                  type="number"
+                                                  value={Math.floor((set.timeSeconds || 0) / 60) || ''}
+                                                  onChange={(e) => {
+                                                    const m = parseInt(e.target.value) || 0;
+                                                    const s = (set.timeSeconds || 0) % 60;
+                                                    if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
+                                                      setActiveSetTimer(null);
+                                                    }
+                                                    updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
+                                                  }}
+                                                  placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 60)}` : 'm'}
+                                                  className="w-7 bg-white/5 rounded-lg py-1.5 px-0.5 font-mono text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors flex-shrink-0"
+                                                />
+                                                <span className="text-white/30 self-center text-xs">:</span>
+                                                <input
+                                                  type="number"
+                                                  value={(set.timeSeconds || 0) % 60 || ''}
+                                                  onChange={(e) => {
+                                                    const s = parseInt(e.target.value) || 0;
+                                                    const m = Math.floor((set.timeSeconds || 0) / 60);
+                                                    if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
+                                                      setActiveSetTimer(null);
+                                                    }
+                                                    updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
+                                                  }}
+                                                  placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
+                                                  className={`w-7 bg-white/5 rounded-lg py-1.5 px-0.5 font-mono text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors flex-shrink-0 ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-accent animate-pulse font-bold' : ''}`}
+                                                />
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleToggleSetTimer(exIdx, setIdx)}
+                                                  className={`p-1 rounded-md transition-colors flex-shrink-0 ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-red-500 bg-red-500/10' : 'text-accent bg-accent/10 hover:bg-accent/20'}`}
+                                                  title={activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'Pausa' : 'Avvia'}
+                                                >
+                                                  {activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? <Pause size={12} /> : <Play size={12} />}
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleResetSetTimer(exIdx, setIdx)}
+                                                  className={`p-1 rounded-md text-white/40 hover:text-white/80 bg-white/5 hover:bg-white/10 transition-all flex-shrink-0 ${(set.timeSeconds || 0) > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                                                  title="Resetta"
+                                                >
+                                                  <RotateCcw size={10} />
+                                                </button>
+                                              </div>
                                           ) : (
                                             <input
                                               type="number"
@@ -1431,8 +1441,8 @@ export function WorkoutSessionLogger({
                                   <div className="w-8 flex-shrink-0" />
                                   {exercise.type === 'cardio' ? (
                                     <><div className="flex-1 text-center">DIST</div><div className="w-14 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
-                                  ) : exercise.type === 'time' ? (
-                                    <><div className="flex-1 text-center">PESO</div><div className="w-14 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
+                                                                      ) : exercise.type === 'time' ? (
+                                      <><div className="flex-1 text-center">PESO</div><div className="w-14 flex-shrink-0" /><div className="flex-shrink-0 w-[106px] text-center">TEMPO</div></>
                                   ) : (
                                     <>
                                       <div className="flex-1 text-center flex items-center justify-center gap-1">
@@ -1462,8 +1472,8 @@ export function WorkoutSessionLogger({
                                     {exercise.type === 'cardio' ? (set.unit === 'km' || set.unit === 'm' ? set.unit : 'km') : (set.unit === 'kg' || set.unit === 'lb' ? set.unit : 'kg')}
                                   </button>
 
-                                  {/* Left Input (Weight / Distance) */}
-                                  <div className="flex-1">
+                                                                     {/* Left Input (Weight / Distance) */}
+                                   <div className={exercise.type === 'time' ? "flex-1 min-w-[70px]" : "flex-1"}>
                                     <div className="flex flex-col space-y-1">
                                       {exercise.type === 'cardio' ? (
                                         <input
@@ -1501,8 +1511,8 @@ export function WorkoutSessionLogger({
                                     })()}
                                   </div>
 
-                                  {/* Right Input (Reps / Time) */}
-                                  <div className="flex-1">
+                                                                     {/* Right Input (Reps / Time) */}
+                                   <div className={exercise.type === 'time' ? "flex-shrink-0 w-[106px]" : "flex-1"}>
                                     {exercise.type === 'cardio' ? (
                                       <div className="flex w-full space-x-1">
                                         <input
@@ -1544,54 +1554,54 @@ export function WorkoutSessionLogger({
                                           className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                         />
                                       </div>
-                                    ) : exercise.type === 'time' ? (
-                                      <div className="flex w-full space-x-1 items-center">
-                                        <input
-                                          type="number"
-                                          value={Math.floor((set.timeSeconds || 0) / 60) || ''}
-                                          onChange={(e) => {
-                                            const m = parseInt(e.target.value) || 0;
-                                            const s = (set.timeSeconds || 0) % 60;
-                                            if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
-                                              setActiveSetTimer(null);
-                                            }
-                                            updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
-                                          }}
-                                          placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 60)}` : 'm'}
-                                          className="w-10 bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
-                                        />
-                                        <span className="text-white/30 self-center">:</span>
-                                        <input
-                                          type="number"
-                                          value={(set.timeSeconds || 0) % 60 || ''}
-                                          onChange={(e) => {
-                                            const s = parseInt(e.target.value) || 0;
-                                            const m = Math.floor((set.timeSeconds || 0) / 60);
-                                            if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
-                                              setActiveSetTimer(null);
-                                            }
-                                            updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
-                                          }}
-                                          placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
-                                          className={`w-10 bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-accent animate-pulse font-bold' : ''}`}
-                                        />
-                                        <button
-                                          type="button"
-                                          onClick={() => handleToggleSetTimer(exIdx, setIdx)}
-                                          className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-red-500 bg-red-500/10' : 'text-accent bg-accent/10 hover:bg-accent/20'}`}
-                                          title={activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'Pausa' : 'Avvia'}
-                                        >
-                                          {activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? <Pause size={14} /> : <Play size={14} />}
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleResetSetTimer(exIdx, setIdx)}
-                                          className={`p-1.5 rounded-lg text-white/40 hover:text-white/80 bg-white/5 hover:bg-white/10 transition-all flex-shrink-0 ${(set.timeSeconds || 0) > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                                          title="Resetta"
-                                        >
-                                          <RotateCcw size={12} />
-                                        </button>
-                                      </div>
+                                                                          ) : exercise.type === 'time' ? (
+                                        <div className="flex w-full space-x-0.5 items-center justify-end">
+                                          <input
+                                            type="number"
+                                            value={Math.floor((set.timeSeconds || 0) / 60) || ''}
+                                            onChange={(e) => {
+                                              const m = parseInt(e.target.value) || 0;
+                                              const s = (set.timeSeconds || 0) % 60;
+                                              if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
+                                                setActiveSetTimer(null);
+                                              }
+                                              updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
+                                            }}
+                                            placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 60)}` : 'm'}
+                                            className="w-7 bg-white/5 rounded-lg py-1.5 px-0.5 font-mono text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors flex-shrink-0"
+                                          />
+                                          <span className="text-white/30 self-center text-xs">:</span>
+                                          <input
+                                            type="number"
+                                            value={(set.timeSeconds || 0) % 60 || ''}
+                                            onChange={(e) => {
+                                              const s = parseInt(e.target.value) || 0;
+                                              const m = Math.floor((set.timeSeconds || 0) / 60);
+                                              if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
+                                                setActiveSetTimer(null);
+                                              }
+                                              updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
+                                            }}
+                                            placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
+                                            className={`w-7 bg-white/5 rounded-lg py-1.5 px-0.5 font-mono text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors flex-shrink-0 ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-accent animate-pulse font-bold' : ''}`}
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => handleToggleSetTimer(exIdx, setIdx)}
+                                            className={`p-1 rounded-md transition-colors flex-shrink-0 ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-red-500 bg-red-500/10' : 'text-accent bg-accent/10 hover:bg-accent/20'}`}
+                                            title={activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'Pausa' : 'Avvia'}
+                                          >
+                                            {activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? <Pause size={12} /> : <Play size={12} />}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleResetSetTimer(exIdx, setIdx)}
+                                            className={`p-1 rounded-md text-white/40 hover:text-white/80 bg-white/5 hover:bg-white/10 transition-all flex-shrink-0 ${(set.timeSeconds || 0) > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                                            title="Resetta"
+                                          >
+                                            <RotateCcw size={10} />
+                                          </button>
+                                        </div>
                                     ) : (
                                       <input
                                         type="number"
