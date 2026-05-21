@@ -32,6 +32,7 @@ export interface WorkoutPlan {
   description?: string;
   exercises: Exercise[];
   isArchived?: boolean; // Archives the plan so it is hidden in dashboard
+  folder?: string; // Folder/Raccoglitore name for grouping
 }
 
 export interface SetEntry {

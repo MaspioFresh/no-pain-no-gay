@@ -378,6 +378,7 @@ export default function App() {
         return (
           <PlanEditor
             settings={data.settings}
+            plans={data.plans}
             onSave={handleSavePlan}
             onCancel={() => setCurrentView('dashboard')}
           />
@@ -387,6 +388,7 @@ export default function App() {
           <PlanEditor
             settings={data.settings}
             existingPlan={modifyingPlan || undefined}
+            plans={data.plans}
             onSave={handleSavePlan}
             onCancel={() => setCurrentView('dashboard')}
           />

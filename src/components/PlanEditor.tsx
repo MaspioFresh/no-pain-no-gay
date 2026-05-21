@@ -16,13 +16,16 @@ interface PlanEditorProps {
   onCancel: () => void;
   existingPlan?: WorkoutPlan;
   settings: AppSettings;
+  plans: WorkoutPlan[];
 }
 
-export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEditorProps) {
+export function PlanEditor({ onSave, onCancel, existingPlan, settings, plans }: PlanEditorProps) {
   const [name, setName] = useState(existingPlan?.name || '');
   const [exercises, setExercises] = useState<Exercise[]>(existingPlan?.exercises || [
     { id: generateId(), name: '', targetSets: [{}] }
   ]);
+  const [folder, setFolder] = useState(existingPlan?.folder || '');
+  const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({});
   const { modalState, closeModal, showAlert } = useModal();
 
   const addExercise = () => {
@@ -144,10 +147,33 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
       return;
     }
 
+    // Reps range validation
+    const errors: Record<string, boolean> = {};
+    let hasRangeError = false;
+    exercises.forEach(ex => {
+      ex.targetSets.forEach((set, sIdx) => {
+        if (set.minReps !== undefined && set.maxReps !== undefined && set.minReps > set.maxReps) {
+          errors[`${ex.id}-${sIdx}`] = true;
+          hasRangeError = true;
+        }
+      });
+    });
+
+    if (hasRangeError) {
+      setValidationErrors(errors);
+      showAlert(
+        'Intervallo ripetizioni non valido',
+        'In una o più serie il numero minimo di ripetizioni è maggiore del numero massimo. Correggi i campi evidenziati in rosso.',
+        'warning'
+      );
+      return;
+    }
+
     const plan: WorkoutPlan = {
       id: existingPlan?.id || generateId(),
       name,
-      exercises
+      exercises,
+      folder: folder.trim() || undefined
     };
     console.log('Saving plan:', plan);
     onSave(plan);
@@ -181,6 +207,36 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
             placeholder="es. Spinta, Gambe, Upper Body..."
             className="w-full input-text text-xl font-bold"
           />
+        </div>
+
+        <div className="space-y-2">
+          <label className="mono-label">Raccoglitore / Cartella (Opzionale)</label>
+          <input
+            type="text"
+            value={folder}
+            onChange={(e) => setFolder(e.target.value)}
+            placeholder="es. Forza, Ipertrofia..."
+            className="w-full input-text"
+          />
+          {(() => {
+            const existingFolders = Array.from(
+              new Set(plans?.map(p => p.folder?.trim()).filter(Boolean) as string[])
+            );
+            return existingFolders.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 mt-1.5 pl-1">
+                {existingFolders.map(f => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setFolder(f)}
+                    className="text-[10px] px-2.5 py-1 rounded bg-white/5 hover:bg-accent hover:text-black border border-white/10 hover:border-accent text-white/60 transition-all font-mono font-bold cursor-pointer"
+                  >
+                    {f}
+                  </button>
+                 ))}
+              </div>
+            ) : null;
+          })()}
         </div>
 
         <div className="space-y-4">
@@ -357,23 +413,25 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
                                               value={set.minReps !== undefined ? set.minReps : (set.reps !== undefined && set.reps !== null ? set.reps : '')}
                                               onChange={(e) => {
                                                 const val = e.target.value === '' ? undefined : parseInt(e.target.value);
-                                                const updates: Partial<PlanSet> = { minReps: val };
+                                                const updates: Partial<PlanSet> = { minReps: val, reps: val };
 
-                                                if (val !== undefined && set.maxReps !== undefined && val > set.maxReps) {
-                                                  updates.maxReps = val;
-                                                }
-
-                                                const currentMaxReps = updates.maxReps !== undefined ? updates.maxReps : set.maxReps;
-                                                if (val === undefined && currentMaxReps === undefined) {
-                                                  updates.reps = undefined;
-                                                } else {
-                                                  updates.reps = val;
+                                                const errorKey = `${exercise.id}-${sIdx}`;
+                                                if (validationErrors[errorKey]) {
+                                                  setValidationErrors(prev => {
+                                                    const next = { ...prev };
+                                                    delete next[errorKey];
+                                                    return next;
+                                                  });
                                                 }
 
                                                 updateTargetSet(exercise.id, sIdx, updates);
                                               }}
                                               placeholder="Reps"
-                                              className="input-number-small w-16 text-center"
+                                              className={`input-number-small w-16 text-center border transition-all ${
+                                                validationErrors[`${exercise.id}-${sIdx}`]
+                                                  ? 'animate-flash-error border-red-500 bg-red-500/10'
+                                                  : 'border-transparent'
+                                              }`}
                                             />
                                             <span className="text-white/30 text-[10px]">-</span>
                                             <input
@@ -383,19 +441,23 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
                                                 const val = e.target.value === '' ? undefined : parseInt(e.target.value);
                                                 const updates: Partial<PlanSet> = { maxReps: val };
 
-                                                if (val !== undefined && set.minReps !== undefined && val < set.minReps) {
-                                                  updates.minReps = val;
-                                                  updates.reps = val;
-                                                } else if (val !== undefined && set.reps !== undefined && val < set.reps) {
-                                                  updates.reps = val;
-                                                } else if (val !== undefined && set.minReps === undefined && set.reps === undefined) {
-                                                  updates.reps = val;
+                                                const errorKey = `${exercise.id}-${sIdx}`;
+                                                if (validationErrors[errorKey]) {
+                                                  setValidationErrors(prev => {
+                                                    const next = { ...prev };
+                                                    delete next[errorKey];
+                                                    return next;
+                                                  });
                                                 }
 
                                                 updateTargetSet(exercise.id, sIdx, updates);
                                               }}
                                               placeholder="Range"
-                                              className="input-number-small w-16 text-center"
+                                              className={`input-number-small w-16 text-center border transition-all ${
+                                                validationErrors[`${exercise.id}-${sIdx}`]
+                                                  ? 'animate-flash-error border-red-500 bg-red-500/10'
+                                                  : 'border-transparent'
+                                              }`}
                                             />
                                           </div>
                                         )}

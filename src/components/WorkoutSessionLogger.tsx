@@ -346,10 +346,10 @@ export function WorkoutSessionLogger({
   const [currentRestSeconds, setCurrentRestSeconds] = useState(60);
   const [restTimerEndTime, setRestTimerEndTime] = useState<number | null>(null);
   const [focusMode, setFocusMode] = useState(defaultFocusMode);
-  const [currentFocusIndex, setCurrentFocusIndex] = useState(0);
   const [editingPlanExId, setEditingPlanExId] = useState<string | null>(null);
   const [editingPlanExNotes, setEditingPlanExNotes] = useState('');
-  const initializedFocusIdx = useRef(false);
+  const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
+
 
   const [activeSetTimer, setActiveSetTimer] = useState<{
     exIdx: number;
@@ -620,6 +620,9 @@ export function WorkoutSessionLogger({
 
     const targetState = !set.completed;
     set.completed = targetState;
+    if (set.subSets) {
+      set.subSets = set.subSets.map(sub => ({ ...sub, completed: targetState }));
+    }
     setExerciseSessions(newSessions);
 
     if (targetState) {
@@ -627,52 +630,8 @@ export function WorkoutSessionLogger({
       if (group) {
         const allCompleted = group.items.every((item: any) => newSessions[item.exIdx]?.sets[setIdx]?.completed);
         if (allCompleted) {
-          let timerTriggered = false;
-          for (const item of group.items) {
-            const s = newSessions[item.exIdx]?.sets[setIdx];
-            if (s && s.setMode && s.setMode !== 'normal') {
-              if (s.setMode === 'restPause') {
-                triggerRestTimer(s.restPauseSeconds || 20);
-                timerTriggered = true;
-                break;
-              } else if (s.setMode === 'dropSet') {
-                handleResetRestTimer();
-                timerTriggered = true;
-                break;
-              }
-            }
-          }
-          if (!timerTriggered) {
-            const maxRest = Math.max(...group.items.map((i: any) => plan.exercises[i.exIdx]?.restSeconds || 60));
-            triggerRestTimer(maxRest);
-          }
-        }
-      }
-    }
-  };
-
-  const handleSubSetCheckToggle = (exIdx: number, setIdx: number, subIdx: number) => {
-    const newSessions = [...exerciseSessions];
-    const set = newSessions[exIdx]?.sets[setIdx];
-    if (!set || !set.subSets || !set.subSets[subIdx]) return;
-
-    const targetState = !set.subSets[subIdx].completed;
-    set.subSets[subIdx].completed = targetState;
-    setExerciseSessions(newSessions);
-
-    if (targetState) {
-      const isLastSub = subIdx === set.subSets.length - 1;
-      if (isLastSub) {
-        const group = groupedExercises.find(g => g.items.some((i: any) => i.exIdx === exIdx));
-        const maxRest = group
-          ? Math.max(...group.items.map((i: any) => plan.exercises[i.exIdx]?.restSeconds || 60))
-          : (plan.exercises[exIdx]?.restSeconds || 60);
-        triggerRestTimer(maxRest);
-      } else {
-        if (set.setMode === 'restPause') {
-          triggerRestTimer(set.restPauseSeconds || 20);
-        } else {
-          handleResetRestTimer();
+          const maxRest = Math.max(...group.items.map((i: any) => plan.exercises[i.exIdx]?.restSeconds || 60));
+          triggerRestTimer(maxRest);
         }
       }
     }
@@ -704,21 +663,95 @@ export function WorkoutSessionLogger({
     return groups;
   }, [plan.exercises]);
 
-  // Set initial focus index to first incomplete group once
-  useEffect(() => {
-    if (focusMode && !initializedFocusIdx.current) {
-      const firstIncompleteIdx = groupedExercises.findIndex(group => {
-        return group.items.some(item => {
-          const session = exerciseSessions[item.exIdx];
-          return !session || session.sets.some(s => !s.completed);
+  const workoutSetSequence = React.useMemo(() => {
+    const sequence: { groupIdx: number; exIdx: number; setIdx: number }[] = [];
+    groupedExercises.forEach((group, groupIdx) => {
+      const maxSets = Math.max(...group.items.map((item: any) => exerciseSessions[item.exIdx]?.sets.length || 0));
+      for (let setIdx = 0; setIdx < maxSets; setIdx++) {
+        group.items.forEach((item: any) => {
+          if (exerciseSessions[item.exIdx]?.sets[setIdx]) {
+            sequence.push({
+              groupIdx,
+              exIdx: item.exIdx,
+              setIdx
+            });
+          }
         });
-      });
-      if (firstIncompleteIdx !== -1) {
-        setCurrentFocusIndex(firstIncompleteIdx);
       }
-      initializedFocusIdx.current = true;
+    });
+    return sequence;
+  }, [groupedExercises, exerciseSessions]);
+
+  const currentFocusIndex = React.useMemo(() => {
+    const currentStep = workoutSetSequence[activeStepIndex];
+    return currentStep ? currentStep.groupIdx : 0;
+  }, [activeStepIndex, workoutSetSequence]);
+
+  const initializedActiveStep = useRef(false);
+  useEffect(() => {
+    if (!initializedActiveStep.current && workoutSetSequence.length > 0) {
+      const firstIncomplete = workoutSetSequence.findIndex(step => {
+        const set = exerciseSessions[step.exIdx]?.sets[step.setIdx];
+        return set && !set.completed;
+      });
+      if (firstIncomplete !== -1) {
+        setActiveStepIndex(firstIncomplete);
+      }
+      initializedActiveStep.current = true;
     }
-  }, [focusMode, groupedExercises, exerciseSessions]);
+  }, [workoutSetSequence, exerciseSessions]);
+
+  // Auto-scroll to active set row
+  useEffect(() => {
+    const currentStep = workoutSetSequence[activeStepIndex];
+    if (currentStep) {
+      const element = document.getElementById(`set-row-${currentStep.exIdx}-${currentStep.setIdx}`);
+      if (element) {
+        const timer = setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [activeStepIndex, workoutSetSequence]);
+
+  const handleCompleteActiveStep = () => {
+    const currentStep = workoutSetSequence[activeStepIndex];
+    if (!currentStep) return;
+
+    const { exIdx, setIdx } = currentStep;
+    const set = exerciseSessions[exIdx]?.sets[setIdx];
+    if (!set) return;
+
+    if (!set.completed) {
+      handleSetCheckToggle(exIdx, setIdx);
+    }
+
+    if (activeStepIndex < workoutSetSequence.length - 1) {
+      setActiveStepIndex(activeStepIndex + 1);
+    }
+  };
+
+  const handlePrevExercise = () => {
+    if (currentFocusIndex > 0) {
+      const prevGroupIdx = currentFocusIndex - 1;
+      const targetIdx = workoutSetSequence.findIndex(step => step.groupIdx === prevGroupIdx);
+      if (targetIdx !== -1) {
+        setActiveStepIndex(targetIdx);
+      }
+    }
+  };
+
+  const handleNextExercise = () => {
+    if (currentFocusIndex < groupedExercises.length - 1) {
+      const nextGroupIdx = currentFocusIndex + 1;
+      const targetIdx = workoutSetSequence.findIndex(step => step.groupIdx === nextGroupIdx);
+      if (targetIdx !== -1) {
+        setActiveStepIndex(targetIdx);
+      }
+    }
+  };
+
 
   const isGroupFinished = (group: any) => {
     return group.items.every((item: any) => {
@@ -766,7 +799,7 @@ export function WorkoutSessionLogger({
   };
 
   return (
-    <div className={`flex flex-col space-y-6 pb-32 ${focusMode ? 'pb-48' : ''}`}>
+    <div className="flex flex-col space-y-6 pb-44">
       <div className="sticky top-0 bg-[#0c0d0e]/95 backdrop-blur-lg z-40 border-b border-white/10 px-1">
         {/* Row 1: title + buttons */}
         <div className="flex items-center justify-between py-3 gap-4">
@@ -827,6 +860,31 @@ export function WorkoutSessionLogger({
       <div className="space-y-6">
         {focusMode ? (
           <div className="flex flex-col space-y-4">
+            {/* Exercise Navigation Header */}
+            <div className="flex items-center justify-between px-2 text-xs">
+              <button
+                type="button"
+                onClick={handlePrevExercise}
+                disabled={currentFocusIndex === 0}
+                className="flex items-center space-x-1 py-1.5 px-3 rounded-lg bg-white/5 border border-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 active:scale-95 transition-all"
+              >
+                <ChevronLeft size={14} />
+                <span>Prec.</span>
+              </button>
+              <span className="mono-label text-[10px] text-white/50 uppercase tracking-widest font-black">
+                Esercizio {currentFocusIndex + 1} di {groupedExercises.length}
+              </span>
+              <button
+                type="button"
+                onClick={handleNextExercise}
+                disabled={currentFocusIndex === groupedExercises.length - 1}
+                className="flex items-center space-x-1 py-1.5 px-3 rounded-lg bg-white/5 border border-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 active:scale-95 transition-all"
+              >
+                <span>Succ.</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+
             {/* Progress Bar */}
             <div className="px-2">
               <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
@@ -947,6 +1005,8 @@ export function WorkoutSessionLogger({
 
                                   if (!set) return null;
 
+                                  const isActive = workoutSetSequence[activeStepIndex]?.exIdx === exIdx && workoutSetSequence[activeStepIndex]?.setIdx === setIdx;
+
                                   const barbell = session?.barbellWeightUsed || 0;
                                   const platesPerSide = set.weight && set.weight > barbell ? (set.weight - barbell) / 2 : 0;
 
@@ -963,7 +1023,7 @@ export function WorkoutSessionLogger({
                                       ? (rawWeight > barbell ? (rawWeight - barbell) / 2 : '')
                                       : (rawWeight > 0 ? rawWeight / 2 : '')
                                     : (rawWeight || '');
-                                  const prevRaw = (exercise.targetSets || [])[setIdx]?.weight || getPreviousSetData(exercise.id, setIdx)?.weight || 0;
+                                  const prevRaw = getPreviousSetData(exercise.id, setIdx)?.weight || (exercise.targetSets || [])[setIdx]?.weight || 0;
                                   const weightPlaceholder = isPerSide && prevRaw
                                     ? String((!exercise.type || exercise.type === 'barbell') ? (prevRaw > barbell ? (prevRaw - barbell) / 2 : 0) : prevRaw / 2)
                                     : (prevRaw ? String(prevRaw) : '0');
@@ -977,8 +1037,8 @@ export function WorkoutSessionLogger({
                                         <div className="w-8 flex-shrink-0" />
                                         {exercise.type === 'cardio' ? (
                                           <><div className="flex-1 text-center">DIST</div><div className="w-14 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
-                                                                                 ) : exercise.type === 'time' ? (
-                                           <><div className="flex-1 text-center">PESO</div><div className="w-14 flex-shrink-0" /><div className="flex-shrink-0 w-[106px] text-center">TEMPO</div></>
+                                        ) : exercise.type === 'time' ? (
+                                          <><div className="flex-1 text-center">PESO</div><div className="w-14 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
                                         ) : (
                                           <>
                                             <div className="flex-1 text-center flex items-center justify-center gap-1">
@@ -993,9 +1053,21 @@ export function WorkoutSessionLogger({
                                             <div className="flex-1 text-center">REPS</div>
                                           </>
                                         )}
-                                        <div className="w-10 flex-shrink-0" />
                                       </div>
-                                      <div className="flex w-full space-x-1 items-center transition-opacity duration-300">
+                                      <div
+                                        id={`set-row-${exIdx}-${setIdx}`}
+                                        onClick={() => {
+                                          const idx = workoutSetSequence.findIndex(s => s.exIdx === exIdx && s.setIdx === setIdx);
+                                          if (idx !== -1) setActiveStepIndex(idx);
+                                        }}
+                                        className={`flex w-full space-x-1 items-center p-1 rounded-xl transition-all duration-300 cursor-pointer ${
+                                          isActive
+                                            ? 'border border-accent/40 bg-accent/[0.06] ring-1 ring-accent/25 shadow-[0_0_12px_rgba(220,252,4,0.1)]'
+                                            : set.completed
+                                              ? 'border border-accent/20 bg-accent/[0.02]'
+                                              : 'border border-transparent hover:border-white/5 hover:bg-white/[0.01]'
+                                        }`}
+                                      >
                                         {/* Unit Button */}
                                         <button
                                           type="button"
@@ -1009,14 +1081,14 @@ export function WorkoutSessionLogger({
                                         </button>
 
                                         {/* Left Input (Weight / Distance) */}
-                                        <div className={exercise.type === 'time' ? "flex-1 min-w-[70px]" : "flex-1"}>
+                                        <div className="flex-1">
                                           <div className="flex flex-col space-y-1">
                                             {exercise.type === 'cardio' ? (
                                               <input
                                                 type="number"
                                                 value={set.distance || ''}
                                                 onChange={(e) => updateSet(exIdx, setIdx, 'distance', parseFloat(e.target.value))}
-                                                placeholder={targetSet?.distance ? `${targetSet.distance}` : (prevSet?.distance ? `${prevSet.distance}` : '0')}
+                                                placeholder={prevSet?.distance ? `${prevSet.distance}` : (targetSet?.distance ? `${targetSet.distance}` : '0')}
                                                 className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                               />
                                             ) : (
@@ -1056,7 +1128,7 @@ export function WorkoutSessionLogger({
                                         </div>
 
                                         {/* Right Input (Reps / Time) */}
-                                        <div className={exercise.type === 'time' ? "flex-shrink-0 w-[106px]" : "flex-1"}>
+                                        <div className="flex-1">
                                           {exercise.type === 'cardio' ? (
                                             <div className="flex w-full space-x-1">
                                               <input
@@ -1068,7 +1140,7 @@ export function WorkoutSessionLogger({
                                                   const s = (set.timeSeconds || 0) % 60;
                                                   updateSet(exIdx, setIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                                 }}
-                                                placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 3600)}` : 'h'}
+                                                placeholder={prevSet?.timeSeconds ? `${Math.floor(prevSet.timeSeconds / 3600)}` : (targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 3600)}` : 'h')}
                                                 className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                               />
                                               <span className="text-white/30 self-center">:</span>
@@ -1081,7 +1153,7 @@ export function WorkoutSessionLogger({
                                                   const s = (set.timeSeconds || 0) % 60;
                                                   updateSet(exIdx, setIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                                 }}
-                                                placeholder={targetSet?.timeSeconds ? `${Math.floor((targetSet.timeSeconds % 3600) / 60)}` : 'm'}
+                                                placeholder={prevSet?.timeSeconds ? `${Math.floor((prevSet.timeSeconds % 3600) / 60)}` : (targetSet?.timeSeconds ? `${Math.floor((targetSet.timeSeconds % 3600) / 60)}` : 'm')}
                                                 className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                               />
                                               <span className="text-white/30 self-center">:</span>
@@ -1094,58 +1166,42 @@ export function WorkoutSessionLogger({
                                                   const m = Math.floor(((set.timeSeconds || 0) % 3600) / 60);
                                                   updateSet(exIdx, setIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                                 }}
-                                                placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
+                                                placeholder={prevSet?.timeSeconds ? `${prevSet.timeSeconds % 60}` : (targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's')}
                                                 className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                               />
                                             </div>
-                                                                                      ) : exercise.type === 'time' ? (
-                                              <div className="flex w-full space-x-0.5 items-center justify-end">
-                                                <input
-                                                  type="number"
-                                                  value={Math.floor((set.timeSeconds || 0) / 60) || ''}
-                                                  onChange={(e) => {
-                                                    const m = parseInt(e.target.value) || 0;
-                                                    const s = (set.timeSeconds || 0) % 60;
-                                                    if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
-                                                      setActiveSetTimer(null);
-                                                    }
-                                                    updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
-                                                  }}
-                                                  placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 60)}` : 'm'}
-                                                  className="w-7 bg-white/5 rounded-lg py-1.5 px-0.5 font-mono text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors flex-shrink-0"
-                                                />
-                                                <span className="text-white/30 self-center text-xs">:</span>
-                                                <input
-                                                  type="number"
-                                                  value={(set.timeSeconds || 0) % 60 || ''}
-                                                  onChange={(e) => {
-                                                    const s = parseInt(e.target.value) || 0;
-                                                    const m = Math.floor((set.timeSeconds || 0) / 60);
-                                                    if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
-                                                      setActiveSetTimer(null);
-                                                    }
-                                                    updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
-                                                  }}
-                                                  placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
-                                                  className={`w-7 bg-white/5 rounded-lg py-1.5 px-0.5 font-mono text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors flex-shrink-0 ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-accent animate-pulse font-bold' : ''}`}
-                                                />
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handleToggleSetTimer(exIdx, setIdx)}
-                                                  className={`p-1 rounded-md transition-colors flex-shrink-0 ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-red-500 bg-red-500/10' : 'text-accent bg-accent/10 hover:bg-accent/20'}`}
-                                                  title={activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'Pausa' : 'Avvia'}
-                                                >
-                                                  {activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? <Pause size={12} /> : <Play size={12} />}
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handleResetSetTimer(exIdx, setIdx)}
-                                                  className={`p-1 rounded-md text-white/40 hover:text-white/80 bg-white/5 hover:bg-white/10 transition-all flex-shrink-0 ${(set.timeSeconds || 0) > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                                                  title="Resetta"
-                                                >
-                                                  <RotateCcw size={10} />
-                                                </button>
-                                              </div>
+                                          ) : exercise.type === 'time' ? (
+                                            <div className="flex w-full space-x-1">
+                                              <input
+                                                type="number"
+                                                value={Math.floor((set.timeSeconds || 0) / 60) || ''}
+                                                onChange={(e) => {
+                                                  const m = parseInt(e.target.value) || 0;
+                                                  const s = (set.timeSeconds || 0) % 60;
+                                                  if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
+                                                    setActiveSetTimer(null);
+                                                  }
+                                                  updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
+                                                }}
+                                                placeholder={prevSet?.timeSeconds ? `${Math.floor(prevSet.timeSeconds / 60)}` : (targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 60)}` : 'm')}
+                                                className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                              />
+                                              <span className="text-white/30 self-center">:</span>
+                                              <input
+                                                type="number"
+                                                value={(set.timeSeconds || 0) % 60 || ''}
+                                                onChange={(e) => {
+                                                  const s = parseInt(e.target.value) || 0;
+                                                  const m = Math.floor((set.timeSeconds || 0) / 60);
+                                                  if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
+                                                    setActiveSetTimer(null);
+                                                  }
+                                                  updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
+                                                }}
+                                                placeholder={prevSet?.timeSeconds ? `${prevSet.timeSeconds % 60}` : (targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's')}
+                                                className={`w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-accent animate-pulse font-bold' : ''}`}
+                                              />
+                                            </div>
                                           ) : (
                                             <input
                                               type="number"
@@ -1155,19 +1211,6 @@ export function WorkoutSessionLogger({
                                               className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                             />
                                           )}
-                                        </div>
-
-                                        {/* Action/Check Button */}
-                                        <div className="w-10 flex-shrink-0">
-                                          <button
-                                            onClick={() => handleSetCheckToggle(exIdx, setIdx)}
-                                            className={`w-full h-[38px] flex items-center justify-center rounded-lg transition-all border active:scale-95 ${set.completed
-                                              ? 'bg-transparent border-accent text-accent shadow-[0_0_3px_var(--accent)]'
-                                              : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
-                                              }`}
-                                          >
-                                            <span className="font-mono text-xs font-black">{setIdx + 1}</span>
-                                          </button>
                                         </div>
                                       </div>
 
@@ -1182,9 +1225,10 @@ export function WorkoutSessionLogger({
                                                 ? (rawSubWeight > barbell ? (rawSubWeight - barbell) / 2 : '')
                                                 : (rawSubWeight > 0 ? rawSubWeight / 2 : '')
                                               : (rawSubWeight || '');
-                                            const subWeightPlaceholder = isPerSide && rawWeight
-                                              ? String((!exercise.type || exercise.type === 'barbell') ? (rawWeight > barbell ? (rawWeight - barbell) / 2 : 0) : rawWeight / 2)
-                                              : (rawWeight ? String(rawWeight) : '0');
+                                            const prevSubRaw = prevSet?.subSets?.[subIdx]?.weight || rawWeight || prevRaw || 0;
+                                            const subWeightPlaceholder = isPerSide && prevSubRaw
+                                              ? String((!exercise.type || exercise.type === 'barbell') ? (prevSubRaw > barbell ? (prevSubRaw - barbell) / 2 : 0) : prevSubRaw / 2)
+                                              : (prevSubRaw ? String(prevSubRaw) : '0');
 
                                             return (
                                               <div key={subIdx} className="flex flex-col space-y-1 transition-opacity duration-300">
@@ -1192,18 +1236,18 @@ export function WorkoutSessionLogger({
                                                   <div className="w-1/2 flex items-center space-x-1">
                                                     {set.setMode === 'dropSet' ? (
                                                       <span className="text-[6px] font-black px-1.5 py-0.5 rounded bg-purple-950/40 text-purple-400 border border-purple-800/40 uppercase tracking-wider">
-                                                        Drop {subIdx + 1}
+                                                        Drop
                                                       </span>
                                                     ) : (
                                                       <span className="text-[6px] font-black px-1.5 py-0.5 rounded bg-orange-950/40 text-orange-400 border border-orange-800/40 uppercase tracking-wider">
-                                                        Rest-Pause {subIdx + 1}
+                                                        Rest-Pause
                                                       </span>
                                                     )}
                                                   </div>
                                                   <div className="w-8 text-center mx-1">UNT</div>
                                                   <div className="w-1/2">REPS</div>
                                                 </div>
-                                                <div className="flex w-full space-x-1 items-start">
+                                                <div className={`flex w-full space-x-1 items-start p-1 rounded-xl transition-all duration-300 ${isSubCompleted ? 'border border-accent/15 bg-accent/[0.015]' : 'border border-transparent'}`}>
                                                   {/* Weight Input */}
                                                   <div className="w-1/2">
                                                     <input
@@ -1232,21 +1276,9 @@ export function WorkoutSessionLogger({
                                                       type="number"
                                                       value={sub.reps || ''}
                                                       onChange={(e) => updateSubSet(exIdx, setIdx, subIdx, 'reps', parseInt(e.target.value))}
-                                                      placeholder="0"
+                                                      placeholder={prevSet?.subSets?.[subIdx]?.reps ? `${prevSet.subSets[subIdx].reps}` : '0'}
                                                       className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                                     />
-                                                  </div>
-                                                  {/* Check Button */}
-                                                  <div className="w-10 flex-shrink-0">
-                                                    <button
-                                                      onClick={() => handleSubSetCheckToggle(exIdx, setIdx, subIdx)}
-                                                      className={`w-full h-[38px] flex items-center justify-center rounded-lg transition-all border active:scale-95 ${isSubCompleted
-                                                        ? 'bg-transparent border-accent text-accent shadow-[0_0_3px_var(--accent)]'
-                                                        : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
-                                                        }`}
-                                                    >
-                                                      <Check size={14} className={isSubCompleted ? 'stroke-[3]' : ''} />
-                                                    </button>
                                                   </div>
                                                 </div>
                                               </div>
@@ -1404,6 +1436,8 @@ export function WorkoutSessionLogger({
 
                             if (!set) return null;
 
+                            const isActive = workoutSetSequence[activeStepIndex]?.exIdx === exIdx && workoutSetSequence[activeStepIndex]?.setIdx === setIdx;
+
                             const barbell = session?.barbellWeightUsed || 0;
                             const platesPerSide = set.weight && set.weight > barbell ? (set.weight - barbell) / 2 : 0;
 
@@ -1421,7 +1455,7 @@ export function WorkoutSessionLogger({
                                 ? (rawWeight > barbell ? (rawWeight - barbell) / 2 : '')
                                 : (rawWeight > 0 ? rawWeight / 2 : '')
                               : (rawWeight || '');
-                            const prevRaw = (exercise.targetSets || [])[setIdx]?.weight || getPreviousSetData(exercise.id, setIdx)?.weight || 0;
+                            const prevRaw = getPreviousSetData(exercise.id, setIdx)?.weight || (exercise.targetSets || [])[setIdx]?.weight || 0;
                             const weightPlaceholder = isPerSide && prevRaw
                               ? String((!exercise.type || exercise.type === 'barbell') ? (prevRaw > barbell ? (prevRaw - barbell) / 2 : 0) : prevRaw / 2)
                               : (prevRaw ? String(prevRaw) : '0');
@@ -1444,8 +1478,8 @@ export function WorkoutSessionLogger({
                                   <div className="w-8 flex-shrink-0" />
                                   {exercise.type === 'cardio' ? (
                                     <><div className="flex-1 text-center">DIST</div><div className="w-14 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
-                                                                      ) : exercise.type === 'time' ? (
-                                      <><div className="flex-1 text-center">PESO</div><div className="w-14 flex-shrink-0" /><div className="flex-shrink-0 w-[106px] text-center">TEMPO</div></>
+                                  ) : exercise.type === 'time' ? (
+                                    <><div className="flex-1 text-center">PESO</div><div className="w-14 flex-shrink-0" /><div className="flex-1 text-center">TEMPO</div></>
                                   ) : (
                                     <>
                                       <div className="flex-1 text-center flex items-center justify-center gap-1">
@@ -1460,9 +1494,22 @@ export function WorkoutSessionLogger({
                                       <div className="flex-1 text-center">REPS</div>
                                     </>
                                   )}
-                                  <div className="w-10 flex-shrink-0" />
                                 </div>
-                                <div className="flex w-full space-x-1 items-center transition-opacity duration-300">
+                                <div
+                                  id={`set-row-${exIdx}-${setIdx}`}
+                                  onClick={() => {
+                                    const idx = workoutSetSequence.findIndex(s => s.exIdx === exIdx && s.setIdx === setIdx);
+                                    if (idx !== -1) setActiveStepIndex(idx);
+                                  }}
+                                  className={`flex w-full space-x-1 items-center p-1 rounded-xl transition-all duration-300 cursor-pointer ${
+                                    isActive
+                                      ? 'border border-accent/40 bg-accent/[0.06] ring-1 ring-accent/25 shadow-[0_0_12px_rgba(220,252,4,0.1)]'
+                                      : set.completed
+                                        ? 'border border-accent/20 bg-accent/[0.02]'
+                                        : 'border border-transparent hover:border-white/5 hover:bg-white/[0.01]'
+                                  }`}
+                                >
+
                                   {/* Unit Button */}
                                   <button
                                     type="button"
@@ -1475,15 +1522,15 @@ export function WorkoutSessionLogger({
                                     {exercise.type === 'cardio' ? (set.unit === 'km' || set.unit === 'm' ? set.unit : 'km') : (set.unit === 'kg' || set.unit === 'lb' ? set.unit : 'kg')}
                                   </button>
 
-                                                                     {/* Left Input (Weight / Distance) */}
-                                   <div className={exercise.type === 'time' ? "flex-1 min-w-[70px]" : "flex-1"}>
+                                  {/* Left Input (Weight / Distance) */}
+                                  <div className="flex-1">
                                     <div className="flex flex-col space-y-1">
                                       {exercise.type === 'cardio' ? (
                                         <input
                                           type="number"
                                           value={set.distance || ''}
                                           onChange={(e) => updateSet(exIdx, setIdx, 'distance', parseFloat(e.target.value))}
-                                          placeholder={targetSet?.distance ? `${targetSet.distance}` : (prevSet?.distance ? `${prevSet.distance}` : '0')}
+                                          placeholder={prevSet?.distance ? `${prevSet.distance}` : (targetSet?.distance ? `${targetSet.distance}` : '0')}
                                           className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                         />
                                       ) : (
@@ -1514,8 +1561,8 @@ export function WorkoutSessionLogger({
                                     })()}
                                   </div>
 
-                                                                     {/* Right Input (Reps / Time) */}
-                                   <div className={exercise.type === 'time' ? "flex-shrink-0 w-[106px]" : "flex-1"}>
+                                  {/* Right Input (Reps / Time) */}
+                                  <div className="flex-1">
                                     {exercise.type === 'cardio' ? (
                                       <div className="flex w-full space-x-1">
                                         <input
@@ -1527,7 +1574,7 @@ export function WorkoutSessionLogger({
                                             const s = (set.timeSeconds || 0) % 60;
                                             updateSet(exIdx, setIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                           }}
-                                          placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 3600)}` : 'h'}
+                                          placeholder={prevSet?.timeSeconds ? `${Math.floor(prevSet.timeSeconds / 3600)}` : (targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 3600)}` : 'h')}
                                           className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                         />
                                         <span className="text-white/30 self-center">:</span>
@@ -1540,7 +1587,7 @@ export function WorkoutSessionLogger({
                                             const s = (set.timeSeconds || 0) % 60;
                                             updateSet(exIdx, setIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                           }}
-                                          placeholder={targetSet?.timeSeconds ? `${Math.floor((targetSet.timeSeconds % 3600) / 60)}` : 'm'}
+                                          placeholder={prevSet?.timeSeconds ? `${Math.floor((prevSet.timeSeconds % 3600) / 60)}` : (targetSet?.timeSeconds ? `${Math.floor((targetSet.timeSeconds % 3600) / 60)}` : 'm')}
                                           className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                         />
                                         <span className="text-white/30 self-center">:</span>
@@ -1553,58 +1600,42 @@ export function WorkoutSessionLogger({
                                             const m = Math.floor(((set.timeSeconds || 0) % 3600) / 60);
                                             updateSet(exIdx, setIdx, 'timeSeconds', h * 3600 + m * 60 + s);
                                           }}
-                                          placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
+                                          placeholder={prevSet?.timeSeconds ? `${prevSet.timeSeconds % 60}` : (targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's')}
                                           className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                         />
                                       </div>
-                                                                          ) : exercise.type === 'time' ? (
-                                        <div className="flex w-full space-x-0.5 items-center justify-end">
-                                          <input
-                                            type="number"
-                                            value={Math.floor((set.timeSeconds || 0) / 60) || ''}
-                                            onChange={(e) => {
-                                              const m = parseInt(e.target.value) || 0;
-                                              const s = (set.timeSeconds || 0) % 60;
-                                              if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
-                                                setActiveSetTimer(null);
-                                              }
-                                              updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
-                                            }}
-                                            placeholder={targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 60)}` : 'm'}
-                                            className="w-7 bg-white/5 rounded-lg py-1.5 px-0.5 font-mono text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors flex-shrink-0"
-                                          />
-                                          <span className="text-white/30 self-center text-xs">:</span>
-                                          <input
-                                            type="number"
-                                            value={(set.timeSeconds || 0) % 60 || ''}
-                                            onChange={(e) => {
-                                              const s = parseInt(e.target.value) || 0;
-                                              const m = Math.floor((set.timeSeconds || 0) / 60);
-                                              if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
-                                                setActiveSetTimer(null);
-                                              }
-                                              updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
-                                            }}
-                                            placeholder={targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's'}
-                                            className={`w-7 bg-white/5 rounded-lg py-1.5 px-0.5 font-mono text-xs text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors flex-shrink-0 ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-accent animate-pulse font-bold' : ''}`}
-                                          />
-                                          <button
-                                            type="button"
-                                            onClick={() => handleToggleSetTimer(exIdx, setIdx)}
-                                            className={`p-1 rounded-md transition-colors flex-shrink-0 ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-red-500 bg-red-500/10' : 'text-accent bg-accent/10 hover:bg-accent/20'}`}
-                                            title={activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'Pausa' : 'Avvia'}
-                                          >
-                                            {activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? <Pause size={12} /> : <Play size={12} />}
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => handleResetSetTimer(exIdx, setIdx)}
-                                            className={`p-1 rounded-md text-white/40 hover:text-white/80 bg-white/5 hover:bg-white/10 transition-all flex-shrink-0 ${(set.timeSeconds || 0) > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                                            title="Resetta"
-                                          >
-                                            <RotateCcw size={10} />
-                                          </button>
-                                        </div>
+                                    ) : exercise.type === 'time' ? (
+                                      <div className="flex w-full space-x-1">
+                                        <input
+                                          type="number"
+                                          value={Math.floor((set.timeSeconds || 0) / 60) || ''}
+                                          onChange={(e) => {
+                                            const m = parseInt(e.target.value) || 0;
+                                            const s = (set.timeSeconds || 0) % 60;
+                                            if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
+                                              setActiveSetTimer(null);
+                                            }
+                                            updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
+                                          }}
+                                          placeholder={prevSet?.timeSeconds ? `${Math.floor(prevSet.timeSeconds / 60)}` : (targetSet?.timeSeconds ? `${Math.floor(targetSet.timeSeconds / 60)}` : 'm')}
+                                          className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                                        />
+                                        <span className="text-white/30 self-center">:</span>
+                                        <input
+                                          type="number"
+                                          value={(set.timeSeconds || 0) % 60 || ''}
+                                          onChange={(e) => {
+                                            const s = parseInt(e.target.value) || 0;
+                                            const m = Math.floor((set.timeSeconds || 0) / 60);
+                                            if (activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx) {
+                                              setActiveSetTimer(null);
+                                            }
+                                            updateSet(exIdx, setIdx, 'timeSeconds', m * 60 + s);
+                                          }}
+                                          placeholder={prevSet?.timeSeconds ? `${prevSet.timeSeconds % 60}` : (targetSet?.timeSeconds ? `${targetSet.timeSeconds % 60}` : 's')}
+                                          className={`w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors ${activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx ? 'text-accent animate-pulse font-bold' : ''}`}
+                                        />
+                                      </div>
                                     ) : (
                                       <input
                                         type="number"
@@ -1614,19 +1645,6 @@ export function WorkoutSessionLogger({
                                         className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                       />
                                     )}
-                                  </div>
-
-                                  {/* Action/Check Button */}
-                                  <div className="w-10 flex-shrink-0">
-                                    <button
-                                      onClick={() => handleSetCheckToggle(exIdx, setIdx)}
-                                      className={`w-full h-[38px] flex items-center justify-center rounded-lg transition-all border active:scale-95 ${set.completed
-                                        ? 'bg-transparent border-accent text-accent shadow-[0_0_3px_var(--accent)]'
-                                        : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
-                                        }`}
-                                    >
-                                      <span className="font-mono text-xs font-black">{setIdx + 1}</span>
-                                    </button>
                                   </div>
                                 </div>
 
@@ -1641,9 +1659,10 @@ export function WorkoutSessionLogger({
                                           ? (rawSubWeight > barbell ? (rawSubWeight - barbell) / 2 : '')
                                           : (rawSubWeight > 0 ? rawSubWeight / 2 : '')
                                         : (rawSubWeight || '');
-                                      const subWeightPlaceholder = isPerSide && rawWeight
-                                        ? String((!exercise.type || exercise.type === 'barbell') ? (rawWeight > barbell ? (rawWeight - barbell) / 2 : 0) : rawWeight / 2)
-                                        : (rawWeight ? String(rawWeight) : '0');
+                                      const prevSubRaw = prevSet?.subSets?.[subIdx]?.weight || rawWeight || prevRaw || 0;
+                                      const subWeightPlaceholder = isPerSide && prevSubRaw
+                                        ? String((!exercise.type || exercise.type === 'barbell') ? (prevSubRaw > barbell ? (prevSubRaw - barbell) / 2 : 0) : prevSubRaw / 2)
+                                        : (prevSubRaw ? String(prevSubRaw) : '0');
 
                                       return (
                                         <div key={subIdx} className="flex flex-col space-y-1 transition-opacity duration-300">
@@ -1651,18 +1670,18 @@ export function WorkoutSessionLogger({
                                             <div className="w-1/2 flex items-center space-x-1">
                                               {set.setMode === 'dropSet' ? (
                                                 <span className="text-[6px] font-black px-1.5 py-0.5 rounded bg-purple-950/40 text-purple-400 border border-purple-800/40 uppercase tracking-wider">
-                                                  Drop {subIdx + 1}
+                                                  Drop
                                                 </span>
                                               ) : (
                                                 <span className="text-[6px] font-black px-1.5 py-0.5 rounded bg-orange-950/40 text-orange-400 border border-orange-800/40 uppercase tracking-wider">
-                                                  Rest-Pause {subIdx + 1}
+                                                  Rest-Pause
                                                 </span>
                                               )}
                                             </div>
                                             <div className="w-8 text-center mx-1">UNT</div>
                                             <div className="w-1/2">REPS</div>
                                           </div>
-                                          <div className="flex w-full space-x-1 items-start">
+                                          <div className={`flex w-full space-x-1 items-start p-1 rounded-xl transition-all duration-300 ${isSubCompleted ? 'border border-accent/15 bg-accent/[0.015]' : 'border border-transparent'}`}>
                                             {/* Weight Input */}
                                             <div className="w-1/2">
                                               <input
@@ -1691,21 +1710,9 @@ export function WorkoutSessionLogger({
                                                 type="number"
                                                 value={sub.reps || ''}
                                                 onChange={(e) => updateSubSet(exIdx, setIdx, subIdx, 'reps', parseInt(e.target.value))}
-                                                placeholder="0"
+                                                placeholder={prevSet?.subSets?.[subIdx]?.reps ? `${prevSet.subSets[subIdx].reps}` : '0'}
                                                 className="w-full bg-white/5 rounded-lg p-2 font-mono text-sm text-center focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
                                               />
-                                            </div>
-                                            {/* Check Button */}
-                                            <div className="w-10 flex-shrink-0">
-                                              <button
-                                                onClick={() => handleSubSetCheckToggle(exIdx, setIdx, subIdx)}
-                                                className={`w-full h-[38px] flex items-center justify-center rounded-lg transition-all border active:scale-95 ${isSubCompleted
-                                                  ? 'bg-transparent border-accent text-accent shadow-[0_0_3px_var(--accent)]'
-                                                  : 'bg-transparent border-white/20 text-white/20 hover:border-accent hover:text-accent'
-                                                  }`}
-                                              >
-                                                <Check size={14} className={isSubCompleted ? 'stroke-[3]' : ''} />
-                                              </button>
                                             </div>
                                           </div>
                                         </div>
@@ -1762,58 +1769,134 @@ export function WorkoutSessionLogger({
 
 
 
-      {/* Focus Mode Fixed Bottom Controls */}
-      {focusMode && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0c0d0e]/90 backdrop-blur-xl border-t border-white/10 z-30">
-          <div className="max-w-lg mx-auto flex flex-col space-y-4">
-            {/* Next Group Banner (Floating) */}
-            <AnimatePresence>
-              {isGroupFinished(groupedExercises[currentFocusIndex]) && currentFocusIndex < groupedExercises.length - 1 && (
-                <motion.button
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  onClick={() => setCurrentFocusIndex(prev => prev + 1)}
-                  className="w-full py-4 bg-accent text-[#0c0d0e] rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center space-x-2 shadow-[0_0_30px_rgba(220,252,4,0.4)] active:scale-95 transition-all"
-                >
-                  <span>Prossimo Esercizio</span>
-                  <ChevronRight size={18} className="stroke-[3]" />
-                </motion.button>
-              )}
-            </AnimatePresence>
+      {/* Set Progression Bar */}
+      {(() => {
+        const currentStep = workoutSetSequence[activeStepIndex];
+        if (!currentStep) return null;
 
-            {/* Main Navigation */}
-            <div className="flex items-center justify-between">
-              <button
-                disabled={currentFocusIndex === 0}
-                onClick={() => setCurrentFocusIndex(prev => prev - 1)}
-                className="flex items-center space-x-2 p-2 rounded-lg bg-white/5 text-accent disabled:opacity-20 border border-white/5 active:scale-90 transition-transform"
-              >
-                <ChevronLeft size={24} />
-                <span className="text-[10px] mono-label font-black uppercase hidden xs:inline">Indietro</span>
-              </button>
+        const { exIdx, setIdx } = currentStep;
+        const exercise = plan.exercises[exIdx];
+        const session = exerciseSessions[exIdx];
+        const set = session?.sets[setIdx];
+        const targetSet = exercise?.targetSets?.[setIdx];
+        const totalSetsForExercise = session?.sets.length || 0;
 
-              <div className="flex flex-col items-center">
-                <span className="text-[10px] mono-label text-accent font-black uppercase tracking-widest">
-                  Focus Mode
-                </span>
-                <span className="text-xs font-black text-white/60">
-                  {currentFocusIndex + 1} / {groupedExercises.length}
-                </span>
+        const targetLabel = getTargetLabel(targetSet, exercise?.type);
+        const isTimerRunning = activeSetTimer && activeSetTimer.exIdx === exIdx && activeSetTimer.setIdx === setIdx;
+        const timeLeft = set?.timeSeconds || 0;
+        const isTimeOrCardio = exercise?.type === 'time' || exercise?.type === 'cardio';
+
+        const formatSetTime = (totalSeconds: number) => {
+          const m = Math.floor(totalSeconds / 60);
+          const s = totalSeconds % 60;
+          return `${m}:${s.toString().padStart(2, '0')}`;
+        };
+
+        const timerInterface = (
+          <div className="flex items-center space-x-2 bg-white/5 p-1 rounded-xl border border-white/5">
+            <div className={`px-2.5 py-1 font-mono text-base font-black tracking-wider min-w-[55px] text-center ${isTimerRunning ? 'text-accent animate-pulse' : 'text-white'}`}>
+              {formatSetTime(timeLeft)}
+            </div>
+            <button
+              type="button"
+              onClick={() => handleToggleSetTimer(exIdx, setIdx)}
+              className={`p-1.5 rounded-lg transition-all active:scale-95 ${isTimerRunning ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'}`}
+            >
+              {isTimerRunning ? <Pause size={14} /> : <Play size={14} />}
+            </button>
+            <button
+              type="button"
+              disabled={timeLeft === 0}
+              onClick={() => handleResetSetTimer(exIdx, setIdx)}
+              className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:text-white/80 hover:bg-white/10 disabled:opacity-30 transition-all active:scale-95 border border-white/5"
+            >
+              <RotateCcw size={14} />
+            </button>
+          </div>
+        );
+
+        return (
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0c0d0e]/90 backdrop-blur-xl border-t border-white/10 z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+            <div className="max-w-lg mx-auto flex flex-col space-y-3">
+              {/* Header Row: Info and target */}
+              <div className="flex justify-between items-center text-xs px-1 gap-2">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[9px] mono-label text-accent font-black uppercase tracking-wider leading-none mb-1">
+                    Serie {setIdx + 1} di {totalSetsForExercise}
+                  </span>
+                  <span className="font-bold text-white truncate text-xs leading-none">
+                    {exercise?.name}
+                  </span>
+                </div>
+                {targetLabel && (
+                  <div className="bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-[9px] mono-label font-bold text-white/60 flex-shrink-0">
+                    Target: {targetLabel}
+                  </div>
+                )}
               </div>
 
-              <button
-                disabled={currentFocusIndex === groupedExercises.length - 1}
-                onClick={() => setCurrentFocusIndex(prev => prev + 1)}
-                className="flex items-center space-x-2 p-2 rounded-lg bg-white/5 text-accent disabled:opacity-20 border border-white/5 active:scale-90 transition-transform"
-              >
-                <span className="text-[10px] mono-label font-black uppercase hidden xs:inline">Avanti</span>
-                <ChevronRight size={24} />
-              </button>
+              {/* Controls Row */}
+              <div className="flex items-center justify-between gap-4">
+                <button
+                  disabled={activeStepIndex === 0}
+                  onClick={() => setActiveStepIndex(prev => prev - 1)}
+                  className="flex-shrink-0 flex items-center justify-center p-2 rounded-lg bg-white/5 text-accent disabled:opacity-20 border border-white/5 active:scale-90 transition-transform"
+                  title="Serie precedente"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+
+                <div className="flex-1 flex justify-center min-w-0">
+                  {isTimeOrCardio ? (
+                    <div className="flex items-center space-x-2 w-full justify-center">
+                      {timerInterface}
+                      <button
+                        onClick={handleCompleteActiveStep}
+                        className={`py-2 px-3.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center space-x-1.5 transition-all active:scale-95 border ${
+                          set?.completed
+                            ? 'bg-transparent border-accent text-accent shadow-[0_0_10px_rgba(220,252,4,0.15)]'
+                            : 'bg-accent text-[#0c0d0e] border-accent hover:opacity-95 shadow-[0_0_15px_rgba(220,252,4,0.2)]'
+                        }`}
+                      >
+                        <Check size={12} className="stroke-[3]" />
+                        <span>{set?.completed ? 'Fatto' : 'Completa'}</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleCompleteActiveStep}
+                      className={`w-full max-w-[200px] py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center space-x-2 transition-all active:scale-95 border ${
+                        set?.completed
+                          ? 'bg-transparent border-accent text-accent shadow-[0_0_10px_rgba(220,252,4,0.15)]'
+                          : 'bg-accent text-[#0c0d0e] border-accent hover:opacity-95 shadow-[0_0_20px_rgba(220,252,4,0.2)]'
+                      }`}
+                    >
+                      <Check size={14} className="stroke-[3]" />
+                      <span>{set?.completed ? 'Serie Completata' : 'Completa Serie'}</span>
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  disabled={activeStepIndex === workoutSetSequence.length - 1}
+                  onClick={() => setActiveStepIndex(prev => prev + 1)}
+                  className="flex-shrink-0 flex items-center justify-center p-2 rounded-lg bg-white/5 text-accent disabled:opacity-20 border border-white/5 active:scale-90 transition-transform"
+                  title="Serie successiva"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+
+              {/* Focus Mode Page Indicator */}
+              {focusMode && (
+                <div className="flex justify-center items-center text-[8px] mono-label text-white/30 uppercase tracking-widest pt-1 border-t border-white/5">
+                  <span>Esercizio {currentFocusIndex + 1} di {groupedExercises.length}</span>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
       {editingPlanExId && (
         <Modal
           isOpen={!!editingPlanExId}

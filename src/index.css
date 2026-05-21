@@ -127,3 +127,19 @@ input[type='number'] {
   -moz-appearance: textfield; /* Firefox */
 }
 
+@keyframes flash-error {
+  0%, 100% {
+    border-color: rgba(239, 68, 68, 0.2);
+    background-color: rgba(239, 68, 68, 0.05);
+  }
+  50% {
+    border-color: rgba(239, 68, 68, 1);
+    background-color: rgba(239, 68, 68, 0.25);
+  }
+}
+
+.animate-flash-error {
+  animation: flash-error 0.5s ease-in-out 3;
+}
+
+
