@@ -359,7 +359,7 @@ export function HistoryView({ sessions, plans, settings, onBack, onDeleteSession
             <button
               disabled={!tempStartDate || !tempEndDate || isInvalidRange}
               onClick={handleConfirmModal}
-              className="flex-1 py-3 rounded-xl bg-accent text-black font-black hover:opacity-90 transition-all text-[10px] mono-label uppercase tracking-widest disabled:opacity-30 disabled:pointer-events-none"
+              className="flex-1 py-3 rounded-xl bg-accent !text-black font-black hover:opacity-90 transition-all text-[10px] mono-label uppercase tracking-widest disabled:opacity-30 disabled:pointer-events-none"
             >
               Conferma
             </button>

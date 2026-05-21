@@ -45,11 +45,11 @@ export function useWorkoutData() {
           // Migrate from number to array
           if (typeof targetSets === 'number') {
             const count = Math.max(1, targetSets);
-            targetSets = Array.from({ length: count }, () => ({ reps: ex.targetReps || 0 }));
+            targetSets = Array.from({ length: count }, () => ({ reps: ex.targetReps }));
           }
           // Ensure it's an array
           if (!Array.isArray(targetSets)) {
-            targetSets = [{ reps: 0 }];
+            targetSets = [{}];
           }
           const type = ex.type || (ex.barbellWeight ? 'barbell' : 'machine');
           return { ...ex, targetSets, type };

@@ -16,11 +16,14 @@ const getTargetRepsLabel = (targetSet: PlanSet | undefined) => {
   if (!targetSet) return '';
   if (targetSet.isMaxReps) return 'MAX';
   if (targetSet.minReps !== undefined && targetSet.maxReps !== undefined) {
+    if (targetSet.minReps === targetSet.maxReps) {
+      return `${targetSet.minReps}`;
+    }
     return `${targetSet.minReps}-${targetSet.maxReps}`;
   }
   if (targetSet.minReps !== undefined) return `${targetSet.minReps}`;
   if (targetSet.maxReps !== undefined) return `${targetSet.maxReps}`;
-  return targetSet.reps ? `${targetSet.reps}` : '';
+  return targetSet.reps !== undefined && targetSet.reps !== null ? `${targetSet.reps}` : '';
 };
 
 const getTargetLabel = (targetSet: PlanSet | undefined, exerciseType?: string) => {
@@ -395,7 +398,7 @@ export function WorkoutSessionLogger({
     const newSessions = [...exerciseSessions];
     const lastSet = newSessions[exerciseIndex].sets[newSessions[exerciseIndex].sets.length - 1];
     newSessions[exerciseIndex].sets.push({
-      reps: lastSet?.reps || 0,
+      reps: lastSet?.reps,
       weight: lastSet?.weight || 0,
       unit: lastSet?.unit || unit,
       completed: false
@@ -407,7 +410,7 @@ export function WorkoutSessionLogger({
     const newSessions = [...exerciseSessions];
     newSessions[exerciseIndex].sets.splice(setIndex, 1);
     if (newSessions[exerciseIndex].sets.length === 0) {
-      newSessions[exerciseIndex].sets.push({ reps: 0, weight: 0, unit: unit, completed: false });
+      newSessions[exerciseIndex].sets.push({ weight: 0, unit: unit, completed: false });
     }
     setExerciseSessions(newSessions);
   };
@@ -1839,7 +1842,7 @@ export function WorkoutSessionLogger({
                   onUpdatePlanExerciseNotes(editingPlanExId, editingPlanExNotes);
                   setEditingPlanExId(null);
                 }}
-                className="flex-1 py-3 rounded-xl bg-accent text-black font-black hover:opacity-90 transition-all text-[10px] mono-label uppercase tracking-widest"
+                className="flex-1 py-3 rounded-xl bg-accent !text-black font-black hover:opacity-90 transition-all text-[10px] mono-label uppercase tracking-widest"
               >
                 Salva Note
               </button>

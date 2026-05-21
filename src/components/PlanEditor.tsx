@@ -21,7 +21,7 @@ interface PlanEditorProps {
 export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEditorProps) {
   const [name, setName] = useState(existingPlan?.name || '');
   const [exercises, setExercises] = useState<Exercise[]>(existingPlan?.exercises || [
-    { id: generateId(), name: '', targetSets: [{ reps: 0 }] }
+    { id: generateId(), name: '', targetSets: [{}] }
   ]);
   const { modalState, closeModal, showAlert } = useModal();
 
@@ -32,7 +32,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
       type: 'barbell',
       barbellWeight: 20,
       restSeconds: 60,
-      targetSets: [{ reps: 10 }]
+      targetSets: [{}]
     }]);
   };
 
@@ -89,7 +89,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
         return {
           ...ex,
           targetSets: [...ex.targetSets, {
-            reps: lastSet?.reps || 0,
+            reps: lastSet?.reps,
             minReps: lastSet?.minReps,
             maxReps: lastSet?.maxReps,
             weight: lastSet?.weight,
@@ -107,18 +107,22 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
       if (ex.id === exId) {
         const newSets = [...ex.targetSets];
         newSets.splice(index, 1);
-        if (newSets.length === 0) newSets.push({ reps: 0 });
+        if (newSets.length === 0) newSets.push({});
         return { ...ex, targetSets: newSets };
       }
       return ex;
     }));
   };
 
-  const updateTargetSet = (exId: string, index: number, field: keyof PlanSet, value: any) => {
+  const updateTargetSet = (exId: string, index: number, updatesOrField: Partial<PlanSet> | keyof PlanSet, value?: any) => {
     setExercises(prev => prev.map(ex => {
       if (ex.id === exId) {
         const newSets = [...ex.targetSets];
-        newSets[index] = { ...newSets[index], [field]: value };
+        if (typeof updatesOrField === 'string') {
+          newSets[index] = { ...newSets[index], [updatesOrField]: value };
+        } else {
+          newSets[index] = { ...newSets[index], ...updatesOrField };
+        }
         return { ...ex, targetSets: newSets };
       }
       return ex;
@@ -130,16 +134,20 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
       showAlert('Nome mancante', 'Inserisci un nome per la scheda.', 'warning');
       return;
     }
-    const validExercises = exercises.filter(ex => ex.name.trim() !== '');
-    if (validExercises.length === 0) {
+    if (exercises.length === 0) {
       showAlert('Nessun esercizio', 'Aggiungi almeno un esercizio prima di salvare.', 'warning');
+      return;
+    }
+    const hasEmptyExerciseName = exercises.some(ex => !ex.name.trim());
+    if (hasEmptyExerciseName) {
+      showAlert('Nome esercizio mancante', 'Tutti gli esercizi inseriti devono avere un nome.', 'warning');
       return;
     }
 
     const plan: WorkoutPlan = {
       id: existingPlan?.id || generateId(),
       name,
-      exercises: validExercises
+      exercises
     };
     console.log('Saving plan:', plan);
     onSave(plan);
@@ -339,27 +347,33 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
                                           }
                                         }}
                                         placeholder={isPerSide ? 'P.Lato' : (exercise.type === 'bodyweight' ? 'Sovr.' : 'Peso')}
-                                        className="input-number-small flex-1 min-w-[50px]"
+                                        className="input-number-small flex-[1.5] min-w-[110px]"
                                       />
                                       <div className="flex items-center space-x-1 flex-shrink-0">
                                         {!set.isMaxReps && (
                                           <div className="flex items-center space-x-1">
                                             <input
                                               type="number"
-                                              value={set.minReps !== undefined ? set.minReps : (set.reps || '')}
+                                              value={set.minReps !== undefined ? set.minReps : (set.reps !== undefined && set.reps !== null ? set.reps : '')}
                                               onChange={(e) => {
                                                 const val = e.target.value === '' ? undefined : parseInt(e.target.value);
-                                                updateTargetSet(exercise.id, sIdx, 'minReps', val);
-                                                if (val === undefined && set.maxReps === undefined) {
-                                                  updateTargetSet(exercise.id, sIdx, 'reps', undefined);
-                                                } else if (val !== undefined && set.maxReps === undefined) {
-                                                  updateTargetSet(exercise.id, sIdx, 'reps', val);
-                                                } else if (val !== undefined && set.maxReps !== undefined) {
-                                                  updateTargetSet(exercise.id, sIdx, 'reps', val);
+                                                const updates: Partial<PlanSet> = { minReps: val };
+
+                                                if (val !== undefined && set.maxReps !== undefined && val > set.maxReps) {
+                                                  updates.maxReps = val;
                                                 }
+
+                                                const currentMaxReps = updates.maxReps !== undefined ? updates.maxReps : set.maxReps;
+                                                if (val === undefined && currentMaxReps === undefined) {
+                                                  updates.reps = undefined;
+                                                } else {
+                                                  updates.reps = val;
+                                                }
+
+                                                updateTargetSet(exercise.id, sIdx, updates);
                                               }}
-                                              placeholder="Min"
-                                              className="input-number-small w-10 text-center"
+                                              placeholder="Reps"
+                                              className="input-number-small w-16 text-center"
                                             />
                                             <span className="text-white/30 text-[10px]">-</span>
                                             <input
@@ -367,13 +381,21 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
                                               value={set.maxReps !== undefined ? set.maxReps : ''}
                                               onChange={(e) => {
                                                 const val = e.target.value === '' ? undefined : parseInt(e.target.value);
-                                                updateTargetSet(exercise.id, sIdx, 'maxReps', val);
-                                                if (val !== undefined && (set.minReps === undefined && set.reps === undefined)) {
-                                                  updateTargetSet(exercise.id, sIdx, 'reps', val);
+                                                const updates: Partial<PlanSet> = { maxReps: val };
+
+                                                if (val !== undefined && set.minReps !== undefined && val < set.minReps) {
+                                                  updates.minReps = val;
+                                                  updates.reps = val;
+                                                } else if (val !== undefined && set.reps !== undefined && val < set.reps) {
+                                                  updates.reps = val;
+                                                } else if (val !== undefined && set.minReps === undefined && set.reps === undefined) {
+                                                  updates.reps = val;
                                                 }
+
+                                                updateTargetSet(exercise.id, sIdx, updates);
                                               }}
-                                              placeholder="Max"
-                                              className="input-number-small w-10 text-center"
+                                              placeholder="Range"
+                                              className="input-number-small w-16 text-center"
                                             />
                                           </div>
                                         )}
@@ -617,7 +639,8 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
                                 )}
                               </div>
                             </div>
-                        )})}
+                          )
+                        })}
                       </div>
                     </div>
 
@@ -645,7 +668,7 @@ export function PlanEditor({ onSave, onCancel, existingPlan, settings }: PlanEdi
                           <span className="text-[10px] text-white/30 uppercase">kg</span>
                         </div>
                       )}
- 
+
                       <div className={`flex items-center space-x-2 ${(!exercise.type || exercise.type === 'barbell') ? 'border-l border-white/10 pl-4' : ''}`}>
                         <span className="text-[10px] text-white/30 uppercase">Recupero:</span>
                         <input

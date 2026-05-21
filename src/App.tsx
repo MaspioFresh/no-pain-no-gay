@@ -46,11 +46,14 @@ const getTargetSetLabel = (s: any, exerciseType?: string) => {
     return '';
   }
   if (s.minReps !== undefined && s.maxReps !== undefined) {
+    if (s.minReps === s.maxReps) {
+      return `${s.minReps} RIP`;
+    }
     return `${s.minReps}-${s.maxReps} RIP`;
   }
   if (s.minReps !== undefined) return `${s.minReps} RIP`;
   if (s.maxReps !== undefined) return `${s.maxReps} RIP`;
-  return s.reps ? `${s.reps} RIP` : '';
+  return s.reps !== undefined && s.reps !== null ? `${s.reps} RIP` : '';
 };
 
 export default function App() {
@@ -147,7 +150,7 @@ export default function App() {
       exerciseId: ex.id,
       supersetId: ex.supersetId,
       sets: (ex.targetSets || []).map(t => ({
-        reps: t.reps || 0,
+        reps: t.reps,
         weight: t.weight || 0,
         timeSeconds: t.timeSeconds || 0,
         distance: t.distance || 0,
