@@ -146,30 +146,41 @@ export default function App() {
     }
 
     setActivePlan(plan);
-    setActiveSessionLogs((plan.exercises || []).map(ex => ({
-      exerciseId: ex.id,
-      supersetId: ex.supersetId,
-      sets: (ex.targetSets || []).map(t => ({
-        reps: t.reps,
-        weight: t.weight || 0,
-        timeSeconds: t.timeSeconds || 0,
-        distance: t.distance || 0,
-        unit: data.settings.unit,
-        completed: false,
-        setMode: t.setMode || 'normal',
-        subSetsCount: t.subSetsCount || 0,
-        restPauseSeconds: t.restPauseSeconds || 20,
-        subSets: t.setMode && t.setMode !== 'normal'
-          ? Array.from({ length: t.subSetsCount || 1 }).map(() => ({
-              reps: 0,
-              weight: t.weight || 0,
-              completed: false,
-              isMaxReps: false
-            }))
-          : undefined
-      })),
-      barbellWeightUsed: ex.barbellWeight || 0
-    })));
+    const prevSession = findPreviousSession(plan.id);
+
+    setActiveSessionLogs((plan.exercises || []).map(ex => {
+      const prevEx = prevSession?.exercises.find(e => e.exerciseId === ex.id);
+      return {
+        exerciseId: ex.id,
+        supersetId: ex.supersetId,
+        sets: (ex.targetSets || []).map((t, idx) => {
+          const prevSet = prevEx?.sets[idx];
+          return {
+            reps: prevSet?.reps !== undefined ? prevSet.reps : t.reps,
+            weight: prevSet?.weight !== undefined ? prevSet.weight : (t.weight || 0),
+            timeSeconds: prevSet?.timeSeconds !== undefined ? prevSet.timeSeconds : (t.timeSeconds || 0),
+            distance: prevSet?.distance !== undefined ? prevSet.distance : (t.distance || 0),
+            unit: prevSet?.unit || data.settings.unit,
+            completed: false,
+            setMode: t.setMode || 'normal',
+            subSetsCount: t.subSetsCount || 0,
+            restPauseSeconds: t.restPauseSeconds || 20,
+            subSets: t.setMode && t.setMode !== 'normal'
+              ? Array.from({ length: t.subSetsCount || 1 }).map((_, subIdx) => {
+                  const prevSub = prevSet?.subSets?.[subIdx];
+                  return {
+                    reps: prevSub?.reps !== undefined ? prevSub.reps : 0,
+                    weight: prevSub?.weight !== undefined ? prevSub.weight : (prevSet?.weight !== undefined ? prevSet.weight : (t.weight || 0)),
+                    completed: false,
+                    isMaxReps: false
+                  };
+                })
+              : undefined
+          };
+        }),
+        barbellWeightUsed: prevEx?.barbellWeightUsed !== undefined ? prevEx.barbellWeightUsed : (ex.barbellWeight || 0)
+      };
+    }));
     setStartTime(Date.now());
     setEditingSessionId(null);
     setCurrentView('active-session');
