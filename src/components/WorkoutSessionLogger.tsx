@@ -840,28 +840,10 @@ export function WorkoutSessionLogger({
         <div className="flex justify-center pb-2">
           <Stopwatch startTime={startTime} compact />
         </div>
-      </div>
-
-      <AnimatePresence>
-        {restTimerActive && restTimerEndTime !== null && (
-          <RestTimer
-            key="workout-rest-timer"
-            initialSeconds={currentRestSeconds}
-            endTime={restTimerEndTime}
-            onReset={handleResetRestTimer}
-            isMinimized={isRestTimerMinimized}
-            onToggleMinimize={handleToggleMinimize}
-            onAdjustTime={handleAdjustRestTime}
-          />
-        )}
-      </AnimatePresence>
-
-
-      <div className="space-y-6">
-        {focusMode ? (
-          <div className="flex flex-col space-y-4">
-            {/* Exercise Navigation Header */}
-            <div className="flex items-center justify-between px-2 text-xs">
+        {/* Exercise Navigation Header & Progress (Focus Mode only) */}
+        {focusMode && (
+          <div className="flex flex-col space-y-2 mt-1 pb-3 px-2">
+            <div className="flex items-center justify-between text-xs">
               <button
                 type="button"
                 onClick={handlePrevExercise}
@@ -884,17 +866,34 @@ export function WorkoutSessionLogger({
                 <ChevronRight size={14} />
               </button>
             </div>
-
-            {/* Progress Bar */}
-            <div className="px-2">
-              <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-accent shadow-[0_0_10px_rgba(220,252,4,0.5)]"
-                  animate={{ width: `${((currentFocusIndex + 1) / groupedExercises.length) * 100}%` }}
-                />
-              </div>
+            <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-accent shadow-[0_0_10px_rgba(220,252,4,0.5)]"
+                animate={{ width: `${((currentFocusIndex + 1) / groupedExercises.length) * 100}%` }}
+              />
             </div>
+          </div>
+        )}
+      </div>
 
+      <AnimatePresence>
+        {restTimerActive && restTimerEndTime !== null && (
+          <RestTimer
+            key="workout-rest-timer"
+            initialSeconds={currentRestSeconds}
+            endTime={restTimerEndTime}
+            onReset={handleResetRestTimer}
+            isMinimized={isRestTimerMinimized}
+            onToggleMinimize={handleToggleMinimize}
+            onAdjustTime={handleAdjustRestTime}
+          />
+        )}
+      </AnimatePresence>
+
+
+      <div className="space-y-6">
+        {focusMode ? (
+          <div className="flex flex-col space-y-4">
             {/* Current Group */}
             <AnimatePresence mode="wait">
               <motion.div
